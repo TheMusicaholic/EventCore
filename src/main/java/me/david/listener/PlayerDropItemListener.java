@@ -12,14 +12,10 @@ public class PlayerDropItemListener implements Listener {
     public void onPlayerDropItem(PlayerDropItemEvent event) {
         final Player player = event.getPlayer();
 
-        if (EventCore.getInstance().getConfig().getBoolean("Settings.AllowItemDropBeforeStart")) return;
+        if (EventCore.getInstance().getSettings().isAllowItemDropBeforeStart()) return;
 
-        if (player.hasPermission("event.bypass")) {
-            event.setCancelled(false);
-            return;
-        }
-
-        event.setCancelled(!(EventCore.getInstance().getGameManager().isRunning()));
+        // Same outcome as checking the bypass permission first, but skips the permission lookup while the game is running.
+        event.setCancelled(!EventCore.getInstance().getGameManager().isRunning() && !player.hasPermission("event.bypass"));
     }
 
 }

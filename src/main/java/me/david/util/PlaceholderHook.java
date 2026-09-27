@@ -7,13 +7,12 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.text.DecimalFormat;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Stream;
 
 public final class PlaceholderHook extends PlaceholderExpansion {
 
@@ -82,9 +81,11 @@ public final class PlaceholderHook extends PlaceholderExpansion {
     }
 
     private static int countTotems(final @NotNull Player player) {
-        return (int) Stream.of(player.getInventory().getContents()).filter(Objects::nonNull)
-                .filter(item -> item.getType() == Material.TOTEM_OF_UNDYING)
-                .count();
+        int totems = 0;
+        for (final ItemStack item : player.getInventory().getContents()) {
+            if (item != null && item.getType() == Material.TOTEM_OF_UNDYING) totems++;
+        }
+        return totems;
     }
 
     @SuppressWarnings("deprecation")

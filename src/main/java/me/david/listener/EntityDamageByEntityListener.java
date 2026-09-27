@@ -1,6 +1,7 @@
 package me.david.listener;
 
 import me.david.EventCore;
+import me.david.util.Settings;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.event.EventHandler;
@@ -12,10 +13,11 @@ public class EntityDamageByEntityListener implements Listener {
 
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        final Settings settings = EventCore.getInstance().getSettings();
         final Entity entity = event.getEntity();
         final Entity damager = event.getDamager();
 
-        if (EventCore.getInstance().getConfig().getBoolean("Settings.DisableItemExplosions", true)) {
+        if (settings.isDisableItemExplosions()) {
             if (entity.getType() == EntityType.ITEM && damager.getType() == EntityType.END_CRYSTAL) {
                 if (event.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION || event.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION) {
                     event.setCancelled(true);
@@ -25,19 +27,15 @@ public class EntityDamageByEntityListener implements Listener {
             }
         }
 
-        if (EventCore.getInstance().getConfig().getBoolean("Settings.DisableFallDamage", true)) {
+        if (settings.isDisableFallDamage()) {
             if (event.getCause() == EntityDamageEvent.DamageCause.FALL) {
                 event.setCancelled(true);
                 return;
             }
         }
 
-        if (damager.hasPermission("event.bypass")) {
-            event.setCancelled(false);
-            return;
-        }
-
-        event.setCancelled(!(EventCore.getInstance().getGameManager().isRunning()));
+        // Same outcome as checking the bypass permission first, but skips the permission lookup while the game is running.
+        event.setCancelled(!EventCore.getInstance().getGameManager().isRunning() && !damager.hasPermission("event.bypass"));
     }
 
 }

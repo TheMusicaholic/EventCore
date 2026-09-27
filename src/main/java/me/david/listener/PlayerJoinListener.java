@@ -12,7 +12,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.List;
 import java.util.Map;
 
 public class PlayerJoinListener implements Listener {
@@ -20,16 +19,16 @@ public class PlayerJoinListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         final Player player = event.getPlayer();
+        final Settings settings = EventCore.getInstance().getSettings();
 
         HostUtil.giveHost(player);
 
-        List<String> joinCommands = EventCore.getInstance().getConfig().getStringList("Settings.PlayerJoin.Commands");
-        for (String command : joinCommands) {
+        for (String command : settings.getPlayerJoinCommands()) {
             final String finalCommand = command.replace("%player%", player.getName()).substring(1);
             FoliaScheduler.getGlobalRegionScheduler().execute(EventCore.getInstance(), () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand));
         }
 
-        if (EventCore.getInstance().getConfig().getBoolean("Messages.PlayerJoin.Enabled")) {
+        if (settings.isJoinMessageEnabled()) {
             Component message = MessageUtil.getPrefix().append(MessageUtil.format("Messages.PlayerJoin.Message", Map.of("%player%", Component.text(player.getName()))));
             event.joinMessage(message);
         } else {
@@ -49,8 +48,9 @@ public class PlayerJoinListener implements Listener {
             }
         }, null, 2);
 
-        if (player.hasPermission("event.notify") && EventCore.getInstance().getConfig().getBoolean("Settings.Updates.NotifyOnJoin")) {
-            UpdateChecker updateChecker = new UpdateChecker(EventCore.getInstance(), "DavidArchive", "EventCore");
+        if (settings.isNotifyUpdatesOnJoin() && player.hasPermission("event.notify")) {
+            // Shared checker: re-queries GitHub at most once an hour instead of on every join.
+            final UpdateChecker updateChecker = EventCore.getInstance().getUpdateChecker();
             updateChecker.check();
 
             FoliaScheduler.getEntityScheduler().runDelayed(player, EventCore.getInstance(), o -> {

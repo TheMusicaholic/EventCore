@@ -11,18 +11,19 @@ import me.david.util.MessageUtil;
 import me.david.util.PlayerUtil;
 import me.david.util.folia.FoliaScheduler;
 import me.david.util.folia.TaskWrapper;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
 public class GameManager implements me.david.api.manager.GameManager {
 
-    private boolean running = false;
+    // Read by listeners and tasks on other threads (region threads on Folia).
+    private volatile boolean running = false;
     private volatile boolean timerRunning = false;
 
     private TaskWrapper startTask;
@@ -59,30 +60,32 @@ public class GameManager implements me.david.api.manager.GameManager {
 
             Bukkit.getPluginManager().callEvent(new GameTimerTickEvent(current));
 
+            // The message and title are the same for every player, so build them once per tick.
+            final Component message;
+            final Title title;
+            final Sound sound;
+            if (current > 0) {
+                String color = EventCore.getInstance().getConfig().getString("Messages.StartTimer.Colors." + current + "sec");
+                String timerText = color + current + "§7";
+
+                final var replacements = Map.of(
+                        "%timer%", MessageUtil.translateColorCodes(timerText),
+                        "%prefix%", MessageUtil.getPrefix()
+                );
+
+                message = MessageUtil.getPrefix().append(MessageUtil.format("Messages.StartTimer.Message", replacements));
+                title = Title.title(MessageUtil.format("Messages.StartTimer.Title", replacements), MessageUtil.format("Messages.StartTimer.SubTitle", replacements));
+                sound = Sound.ENTITY_CHICKEN_EGG;
+            } else {
+                message = MessageUtil.getPrefix().append(MessageUtil.get("Messages.Start.Message"));
+                title = Title.title(MessageUtil.get("Messages.Start.Title"), MessageUtil.get("Messages.Start.SubTitle"));
+                sound = Sound.ENTITY_PLAYER_LEVELUP;
+            }
+
             for (Player player : Bukkit.getOnlinePlayers()) {
-                if (current > 0) {
-                    String color = EventCore.getInstance().getConfig().getString("Messages.StartTimer.Colors." + current + "sec");
-                    String timerText = color + current + "§7";
-
-                    final var replacements = Map.of(
-                            "%timer%", MessageUtil.translateColorCodes(timerText),
-                            "%prefix%", MessageUtil.getPrefix()
-                    );
-
-                    player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.format("Messages.StartTimer.Message", replacements)));
-
-                    Title title = Title.title(MessageUtil.format("Messages.StartTimer.Title", replacements), MessageUtil.format("Messages.StartTimer.SubTitle", replacements));
-                    player.showTitle(title);
-
-                    player.playSound(player.getLocation(), Sound.ENTITY_CHICKEN_EGG, 5, 5);
-                } else {
-                    player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.get("Messages.Start.Message")));
-
-                    Title title = Title.title(MessageUtil.get("Messages.Start.Title"), MessageUtil.get("Messages.Start.SubTitle"));
-                    player.showTitle(title);
-
-                    player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 5, 5);
-                }
+                player.sendMessage(message);
+                player.showTitle(title);
+                player.playSound(player.getLocation(), sound, 5, 5);
             }
 
             if (current <= 0) {
@@ -128,7 +131,7 @@ public class GameManager implements me.david.api.manager.GameManager {
 
         if (EventCore.getInstance().getConfig().getBoolean("Settings.DropOnPlayerCount.Enabled")) {
             autoDropTask = FoliaScheduler.getGlobalRegionScheduler().runAtFixedRate(EventCore.getInstance(), o -> {
-                if (running && PlayerUtil.getAlive() <= EventCore.getInstance().getConfig().getLong("Settings.DropOnPlayerCount.Count") && !autoDropped) {
+                if (running && !autoDropped && PlayerUtil.getAlive() <= EventCore.getInstance().getSettings().getDropOnPlayerCount()) {
                     autoDropped = true;
                     EventCore.getInstance().getMapManager().drop();
                 }
@@ -146,7 +149,7 @@ public class GameManager implements me.david.api.manager.GameManager {
 
         running = false;
         timerRunning = false;
-        BorderUtil.lastOptimal = 200;
+        BorderUtil.lastOptimal = BorderUtil.borderDefault;
 
         stopInGameTimer();
         stopAllTimers();
@@ -156,12 +159,12 @@ public class GameManager implements me.david.api.manager.GameManager {
                 "%prefix%", MessageUtil.getPrefix()
         );
 
+        final Component message = MessageUtil.getPrefix().append(MessageUtil.format("Messages.Stop.Message", replacements));
+        final Title title = Title.title(MessageUtil.format("Messages.Stop.Title", replacements), MessageUtil.format("Messages.Stop.SubTitle", replacements));
+
         for (Player player : Bukkit.getOnlinePlayers()) {
-            player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.format("Messages.Stop.Message", replacements)));
-
-            Title title = Title.title(MessageUtil.format("Messages.Stop.Title", replacements), MessageUtil.format("Messages.Stop.SubTitle", replacements));
+            player.sendMessage(message);
             player.showTitle(title);
-
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 5, 5);
             PlayerUtil.cleanPlayer(player);
         }
@@ -194,13 +197,15 @@ public class GameManager implements me.david.api.manager.GameManager {
 
             Bukkit.getPluginManager().callEvent(new InGameTimerTickEvent(inGameTimer));
 
-            String raw = Objects.requireNonNull(EventCore.getInstance().getConfig().getString("Settings.IngameTimer.Format"))
+            String raw = EventCore.getInstance().getSettings().getIngameTimerFormat()
                     .replace("hh", String.format("%02d", (inGameTimer / 3600)))
                     .replace("mm", String.format("%02d", ((inGameTimer % 3600) / 60)))
                     .replace("ss", String.format("%02d", (inGameTimer % 60)));
 
+            // Same text for everyone, so translate it once per tick instead of once per player.
+            final Component actionbar = MessageUtil.translateColorCodes(raw);
             for (Player player : Bukkit.getOnlinePlayers()) {
-                player.sendActionBar(MessageUtil.translateColorCodes(raw));
+                player.sendActionBar(actionbar);
             }
         }, 0, 20);
     }
