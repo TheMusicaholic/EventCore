@@ -1,7 +1,9 @@
 package me.david.util;
 
 import me.david.EventCore;
-import me.david.util.folia.FoliaScheduler;
+import org.bukkit.WorldBorder;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.jetbrains.annotations.NotNull;
 
 public class BorderUtil implements Runnable {
 
@@ -12,11 +14,14 @@ public class BorderUtil implements Runnable {
     public static volatile boolean autoBorder;
 
     public BorderUtil() {
-        borderDefault = EventCore.getInstance().getConfig().getInt("Settings.WorldBorder.DefaultSize", borderDefault);
-        borderDamageBuffer = EventCore.getInstance().getConfig().getDouble("Settings.WorldBorder.Damage.Buffer", borderDamageBuffer);
-        borderDamageAmount = EventCore.getInstance().getConfig().getDouble("Settings.WorldBorder.Damage.Amount", borderDamageAmount);
-        autoBorder = EventCore.getInstance().getConfig().getBoolean("Settings.WorldBorder.AutoBorder", false);
         lastOptimal = borderDefault;
+    }
+
+    public static void loadSettings(@NotNull final FileConfiguration config) {
+        borderDefault = config.getInt("Settings.WorldBorder.DefaultSize", borderDefault);
+        borderDamageBuffer = config.getDouble("Settings.WorldBorder.Damage.Buffer", borderDamageBuffer);
+        borderDamageAmount = config.getDouble("Settings.WorldBorder.Damage.Amount", borderDamageAmount);
+        autoBorder = config.getBoolean("Settings.WorldBorder.AutoBorder", false);
     }
 
     public static void setAutoBorder(boolean value) {
@@ -26,20 +31,23 @@ public class BorderUtil implements Runnable {
     }
 
 
+    // Runs on the global region, so the border can be changed directly without another scheduler hop.
     @Override
     public void run() {
-        if (EventCore.getInstance().getGameManager().isRunning() && autoBorder) {
-            double current = EventCore.getInstance().getMapManager().getSpawnLocation().getWorld().getWorldBorder().getSize();
-            int optimal = getOptimalSize();
-            if (lastOptimal > optimal) {
-                lastOptimal = optimal;
-                FoliaScheduler.getGlobalRegionScheduler().execute(EventCore.getInstance(), () -> EventCore.getInstance().getMapManager().getSpawnLocation().getWorld().getWorldBorder().changeSize(optimal, (long) (current - optimal) * 20));
-            }
-        }
+        if (!EventCore.getInstance().getGameManager().isRunning() || !autoBorder) return;
+
+        final int optimal = getOptimalSize();
+        // Only shrink, and only send the (world-wide) border update when the target actually changes.
+        if (lastOptimal <= optimal) return;
+
+        lastOptimal = optimal;
+        final WorldBorder worldBorder = EventCore.getInstance().getMapManager().getSpawnLocation().getWorld().getWorldBorder();
+        worldBorder.changeSize(optimal, (long) (worldBorder.getSize() - optimal) * 20);
     }
 
     private int getOptimalSize() {
-        int optimal = (int) (((Math.pow(PlayerUtil.getAlive(), 2)) / 60 + 4 + 0.6 * PlayerUtil.getAlive()) * 2);
+        final int alive = PlayerUtil.getAlive();
+        int optimal = (int) (((Math.pow(alive, 2)) / 60 + 4 + 0.6 * alive) * 2);
         return Math.min(200, optimal);
     }
 

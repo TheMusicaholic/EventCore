@@ -23,11 +23,12 @@ public class PlayerDeathListener implements Listener {
             return;
         }
 
-        if (EventCore.getInstance().getConfig().getBoolean("Messages.PlayerDeath.Enabled")) {
-            if (player.getKiller() != null) {
+        if (EventCore.getInstance().getSettings().isDeathMessageEnabled()) {
+            final Player killer = player.getKiller();
+            if (killer != null) {
                 event.deathMessage(MessageUtil.format("Messages.PlayerDeath.Message1", Map.of(
                                 "%player%", Component.text(player.getName()),
-                                "%killer%", Component.text(player.getKiller().getName()))
+                                "%killer%", Component.text(killer.getName()))
                 ));
             } else {
                 event.deathMessage(MessageUtil.format(

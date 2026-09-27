@@ -1,6 +1,7 @@
 package me.david.util;
 
 import com.google.gson.JsonParser;
+import lombok.AccessLevel;
 import lombok.Getter;
 import me.david.EventCore;
 import net.kyori.adventure.text.Component;
@@ -8,7 +9,6 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
@@ -17,18 +17,25 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 @Getter
 public class UpdateChecker {
+
+    private static final long RECHECK_INTERVAL_MILLIS = TimeUnit.HOURS.toMillis(1);
 
     @Getter
     private final JavaPlugin plugin;
     private final String apiUrl;
     private final String currentVer;
 
-    private String latestVer;
-    private boolean hasUpdate;
-    private String downloadUrl;
+    // Written by the checker thread, read by the server threads.
+    private volatile String latestVer;
+    private volatile boolean hasUpdate;
+    private volatile String downloadUrl;
+
+    @Getter(AccessLevel.NONE)
+    private long lastCheckMillis;
 
     @SuppressWarnings("deprecation")
     public UpdateChecker(JavaPlugin plugin, String owner, String repo) {
@@ -37,8 +44,16 @@ public class UpdateChecker {
         this.currentVer = normalize(plugin.getDescription().getVersion());
     }
 
+    /**
+     * Fetches the latest release in the background. Calls within an hour of the previous check are ignored,
+     * so this is cheap enough to call on every join instead of querying the GitHub API each time.
+     */
     @SuppressWarnings("deprecation")
-    public void check() {
+    public synchronized void check() {
+        final long now = System.currentTimeMillis();
+        if (lastCheckMillis != 0 && now - lastCheckMillis < RECHECK_INTERVAL_MILLIS) return;
+        lastCheckMillis = now;
+
         Thread.ofVirtual().start(() -> {
             try {
                 var connection = (HttpURLConnection) new URL(apiUrl).openConnection();
@@ -57,8 +72,10 @@ public class UpdateChecker {
                     downloadUrl = json.get("html_url").getAsString();
                     hasUpdate = compare(currentVer, latestVer) < 0;
 
+                    // The logger is thread-safe, so there's no need to hop to the main thread
+                    // (Bukkit.getScheduler() isn't available on Folia anyway).
                     if (EventCore.getInstance().getConfig().getBoolean("Settings.Updates.LogInConsole")) {
-                        Bukkit.getScheduler().runTask(plugin, this::log);
+                        log();
                     }
                 }
             } catch (Exception exception) {

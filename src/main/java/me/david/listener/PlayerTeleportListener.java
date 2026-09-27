@@ -11,15 +11,14 @@ public class PlayerTeleportListener implements Listener {
 
     @EventHandler
     public void onPlayerTeleport(PlayerTeleportEvent event) {
+        if (event.getCause() != PlayerTeleportEvent.TeleportCause.ENDER_PEARL) return;
+        if (!EventCore.getInstance().getSettings().isDisableEnderPearlsOutsideBorder()) return;
+
         final Location to = event.getTo();
         final World world = to.getWorld();
 
-        if (EventCore.getInstance().getConfig().getBoolean("Settings.WorldBorder.DisableEnderPeals")) {
-            if (event.getCause() == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
-                if (!(world.getWorldBorder().isInside(to))) {
-                    event.setCancelled(true);
-                }
-            }
+        if (!(world.getWorldBorder().isInside(to))) {
+            event.setCancelled(true);
         }
     }
 

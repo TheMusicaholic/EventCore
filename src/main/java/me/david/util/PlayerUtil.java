@@ -16,7 +16,11 @@ import java.util.Objects;
 public class PlayerUtil {
 
     public int getAlive() {
-        return Bukkit.getOnlinePlayers().stream().filter(player2 -> player2.getGameMode() == GameMode.SURVIVAL).toList().size();
+        int alive = 0;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (player.getGameMode() == GameMode.SURVIVAL) alive++;
+        }
+        return alive;
     }
 
     public int getTotal() {

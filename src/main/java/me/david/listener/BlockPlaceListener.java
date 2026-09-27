@@ -12,17 +12,12 @@ public class BlockPlaceListener implements Listener {
     public void onBlockPlace(BlockPlaceEvent event) {
         final Player player = event.getPlayer();
 
-        if (player.hasPermission("event.bypass")) {
-            event.setCancelled(false);
-            return;
-        }
+        // Same outcome as checking the bypass permission first, but skips the permission lookup
+        // for the common case (game running, below the build limit).
+        final boolean restricted = !EventCore.getInstance().getGameManager().isRunning()
+                || event.getBlock().getY() > EventCore.getInstance().getSettings().getMaxBuildHeight();
 
-        if (event.getBlock().getLocation().getBlockY() > EventCore.getInstance().getConfig().getLong("Settings.MaxBuildHeight", 0L)) {
-            event.setCancelled(true);
-            return;
-        }
-
-        event.setCancelled(!(EventCore.getInstance().getGameManager().isRunning()));
+        event.setCancelled(restricted && !player.hasPermission("event.bypass"));
     }
 
 }

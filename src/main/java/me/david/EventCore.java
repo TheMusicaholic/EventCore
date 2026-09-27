@@ -12,6 +12,7 @@ import me.david.manager.KitManager;
 import me.david.manager.MapManager;
 import me.david.util.*;
 import me.david.util.folia.FoliaScheduler;
+import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -25,6 +26,8 @@ public class EventCore extends JavaPlugin {
 
     @Getter
     private static EventCore instance;
+    private volatile Settings settings;
+    private UpdateChecker updateChecker;
     private MapManager mapManager;
     private GameManager gameManager;
     private KitManager kitManager;
@@ -33,8 +36,10 @@ public class EventCore extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         instance = this;
+        reloadConfig();
 
-        new UpdateChecker(instance, "DavidArchive", "EventCore").check();
+        updateChecker = new UpdateChecker(instance, "DavidArchive", "EventCore");
+        updateChecker.check();
 
         mapManager = new MapManager();
         gameManager = new GameManager();
@@ -69,12 +74,15 @@ public class EventCore extends JavaPlugin {
             Bukkit.getPluginManager().registerEvents(new PlayerTeleportListener(), instance);
         }
 
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+        final boolean placeholderApi = Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null;
+        if (placeholderApi) {
             new PlaceholderHook().register();
         }
 
-        FoliaScheduler.getAsyncScheduler().runAtFixedRate(instance, o -> new BorderUtil().run(), 20, 10);
-        FoliaScheduler.getAsyncScheduler().runAtFixedRate(instance, o -> new AutoBroadcast().run(), 20, 20 * getConfig().getLong("AutoBroadcast.Interval", 60));
+        final BorderUtil borderUtil = new BorderUtil();
+        FoliaScheduler.getGlobalRegionScheduler().runAtFixedRate(instance, o -> borderUtil.run(), 20, 10);
+        final AutoBroadcast autoBroadcast = new AutoBroadcast();
+        FoliaScheduler.getAsyncScheduler().runAtFixedRate(instance, o -> autoBroadcast.run(), 20, 20 * getConfig().getLong("AutoBroadcast.Interval", 60));
         FoliaScheduler.getGlobalRegionScheduler().runDelayed(instance, o -> {
             World world = mapManager.getSpawnLocation().getWorld();
             world.setGameRule(GameRules.SHOW_ADVANCEMENT_MESSAGES, false);
@@ -86,8 +94,18 @@ public class EventCore extends JavaPlugin {
 
         if (getConfig().getBoolean("Messages.Actionbar.Enabled")) {
             FoliaScheduler.getAsyncScheduler().runAtFixedRate(instance, o -> {
+                final String raw = settings.getActionbarMessage();
+
+                // Without placeholders the text is the same for everyone, so translate it once.
+                if (!placeholderApi || raw.indexOf('%') < 0) {
+                    final Component actionbar = MessageUtil.translateColorCodes(raw);
+                    for (Player player : Bukkit.getOnlinePlayers()) {
+                        player.sendActionBar(actionbar);
+                    }
+                    return;
+                }
+
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    String raw = getConfig().getString("Messages.Actionbar.Message", "&aYou are playing the best Event!");
                     String parsed = PlaceholderAPI.setPlaceholders(player, raw);
 
                     player.sendActionBar(MessageUtil.translateColorCodes(parsed));
@@ -98,6 +116,16 @@ public class EventCore extends JavaPlugin {
         if (getConfig().getBoolean("Settings.Metrics")) {
             new Metrics(instance, 28277);
         }
+    }
+
+    @Override
+    public void reloadConfig() {
+        super.reloadConfig();
+
+        // Hot paths read these snapshots instead of walking the config, so refresh them on every (re)load.
+        settings = new Settings(getConfig());
+        BorderUtil.loadSettings(getConfig());
+        MessageUtil.clearCache();
     }
 
     @Override

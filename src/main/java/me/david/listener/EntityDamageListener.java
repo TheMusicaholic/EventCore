@@ -1,7 +1,8 @@
 package me.david.listener;
 
 import me.david.EventCore;
-import org.bukkit.World;
+import me.david.util.Settings;
+import org.bukkit.Location;
 import org.bukkit.WorldBorder;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -14,7 +15,9 @@ public class EntityDamageListener implements Listener {
 
     @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
-        if (EventCore.getInstance().getConfig().getBoolean("Settings.DisableFallDamage", true)) {
+        final Settings settings = EventCore.getInstance().getSettings();
+
+        if (settings.isDisableFallDamage()) {
             if (event.getCause() == EntityDamageByEntityEvent.DamageCause.FALL) {
                 event.setCancelled(true);
                 return;
@@ -28,25 +31,28 @@ public class EntityDamageListener implements Listener {
 
         if (!(event.getEntity() instanceof Player player)) return;
 
-        if (EventCore.getInstance().getConfig().getBoolean("Settings.WorldBorder.Boost.Enabled")) {
+        if (settings.isBorderBoostEnabled()) {
             if (event.getCause() == EntityDamageEvent.DamageCause.WORLD_BORDER) {
-                World world = player.getWorld();
-                WorldBorder worldBorder = world.getWorldBorder();
-                if (!(worldBorder.isInside(player.getLocation()))) {
-                    double boostXZ = EventCore.getInstance().getConfig().getDouble("Settings.WorldBorder.Boost.StrengthXZ", 1.3);
-                    double boostY = EventCore.getInstance().getConfig().getDouble("Settings.WorldBorder.Boost.StrengthY", 0.1);
-                    double maxX = worldBorder.getCenter().getBlockX() + worldBorder.getSize() / 2;
-                    double minX = worldBorder.getCenter().getBlockX() - worldBorder.getSize() / 2;
-                    double maxZ = worldBorder.getCenter().getBlockZ() + worldBorder.getSize() / 2;
-                    double minZ = worldBorder.getCenter().getBlockZ() - worldBorder.getSize() / 2;
-                    if (player.getLocation().getBlockX() > maxX) {
+                WorldBorder worldBorder = player.getWorld().getWorldBorder();
+                // getLocation()/getCenter() allocate a new Location on every call, so fetch them once.
+                final Location location = player.getLocation();
+                if (!(worldBorder.isInside(location))) {
+                    double boostXZ = settings.getBorderBoostStrengthXZ();
+                    double boostY = settings.getBorderBoostStrengthY();
+                    final Location center = worldBorder.getCenter();
+                    final double radius = worldBorder.getSize() / 2;
+                    double maxX = center.getBlockX() + radius;
+                    double minX = center.getBlockX() - radius;
+                    double maxZ = center.getBlockZ() + radius;
+                    double minZ = center.getBlockZ() - radius;
+                    if (location.getBlockX() > maxX) {
                         player.setVelocity(player.getVelocity().add(new Vector(-boostXZ, boostY, 0)));
-                    } else if (player.getLocation().getBlockX() < minX) {
+                    } else if (location.getBlockX() < minX) {
                         player.setVelocity(player.getVelocity().add(new Vector(boostXZ, boostY, 0)));
                     }
-                    if (player.getLocation().getBlockZ() > maxZ) {
+                    if (location.getBlockZ() > maxZ) {
                         player.setVelocity(player.getVelocity().add(new Vector(0, boostY, -boostXZ)));
-                    } else if (player.getLocation().getBlockZ() < minZ) {
+                    } else if (location.getBlockZ() < minZ) {
                         player.setVelocity(player.getVelocity().add(new Vector(0, boostY, boostXZ)));
                     }
                 }
