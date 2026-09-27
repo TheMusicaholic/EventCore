@@ -27,9 +27,11 @@ public class AutoBroadcast implements Runnable {
 
         String message = messages.get(index);
         if (settings.isAutoBroadcastUseCommand()) {
-            // This task runs async, but commands may only be dispatched from the server (global region) thread.
             final String command = settings.getAutoBroadcastCommand().replace("%message%", message);
-            FoliaScheduler.getGlobalRegionScheduler().execute(EventCore.getInstance(), () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command));
+            // Configured with a leading slash like the other commands in config.yml, but dispatchCommand expects none.
+            final String commandLine = command.startsWith("/") ? command.substring(1) : command;
+            // This task runs async, but commands may only be dispatched from the server (global region) thread.
+            FoliaScheduler.getGlobalRegionScheduler().execute(EventCore.getInstance(), () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), commandLine));
         } else {
             final Component component = MessageUtil.translateColorCodes(message);
             for (Player player : Bukkit.getOnlinePlayers()) {
