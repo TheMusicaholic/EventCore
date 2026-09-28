@@ -3,6 +3,7 @@ package me.david.command.impl;
 import me.david.EventCore;
 import me.david.command.BukkitCommand;
 import me.david.util.MessageUtil;
+import me.david.util.PlayerUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -27,7 +28,7 @@ public class KitCommand extends BukkitCommand {
 
         if (args.length == 1) {
             if (args[0].equalsIgnoreCase("*")) {
-                Bukkit.getOnlinePlayers().forEach(plugin.getKitManager()::give);
+                PlayerUtil.runForAll(plugin.getKitManager()::give);
                 player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Everyone §7has been equipped!")));
                 return;
             }
@@ -38,7 +39,7 @@ public class KitCommand extends BukkitCommand {
                 return;
             }
 
-            plugin.getKitManager().give(target);
+            PlayerUtil.runFor(target, plugin.getKitManager()::give);
             player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§a" + target.getName() + " §7has been equipped!")));
             return;
         }

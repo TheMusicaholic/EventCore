@@ -1,12 +1,11 @@
 package me.david.listener;
 
 import me.david.EventCore;
+import me.david.util.CommandUtil;
 import me.david.util.HostUtil;
 import me.david.util.MessageUtil;
 import me.david.util.Settings;
-import me.david.util.folia.FoliaScheduler;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -24,8 +23,7 @@ public class PlayerQuitListener implements Listener {
         HostUtil.removeHost(player);
 
         for (String command : settings.getPlayerQuitCommands()) {
-            final String finalCommand = command.replace("%player%", player.getName()).substring(1);
-            FoliaScheduler.getGlobalRegionScheduler().execute(EventCore.getInstance(), () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand));
+            CommandUtil.dispatch(command.replace("%player%", player.getName()));
         }
 
         if (settings.isQuitMessageEnabled()) {

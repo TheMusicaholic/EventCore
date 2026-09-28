@@ -42,8 +42,7 @@ public class PlayerDeathListener implements Listener {
         event.setKeepLevel(true);
         event.setDroppedExp(0);
 
-        PlayerUtil.cleanPlayer(player);
-        player.setGameMode(GameMode.SPECTATOR);
+        PlayerUtil.resetPlayer(player, GameMode.SPECTATOR);
     }
 
 }

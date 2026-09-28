@@ -15,7 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
@@ -48,15 +48,15 @@ public class UpdateChecker {
      * Fetches the latest release in the background. Calls within an hour of the previous check are ignored,
      * so this is cheap enough to call on every join instead of querying the GitHub API each time.
      */
-    @SuppressWarnings("deprecation")
     public synchronized void check() {
         final long now = System.currentTimeMillis();
         if (lastCheckMillis != 0 && now - lastCheckMillis < RECHECK_INTERVAL_MILLIS) return;
         lastCheckMillis = now;
 
         Thread.ofVirtual().start(() -> {
+            HttpURLConnection connection = null;
             try {
-                var connection = (HttpURLConnection) new URL(apiUrl).openConnection();
+                connection = (HttpURLConnection) URI.create(apiUrl).toURL().openConnection();
                 connection.setRequestProperty("User-Agent", "Mozilla/5.0");
                 connection.setConnectTimeout(5000);
                 connection.setReadTimeout(5000);
@@ -73,13 +73,20 @@ public class UpdateChecker {
                     hasUpdate = compare(currentVer, latestVer) < 0;
 
                     // The logger is thread-safe, so there's no need to hop to the main thread
-                    // (Bukkit.getScheduler() isn't available on Folia anyway).
-                    if (EventCore.getInstance().getConfig().getBoolean("Settings.Updates.LogInConsole")) {
+                    // (Bukkit.getScheduler() isn't available on Folia anyway). The settings snapshot is safe to read
+                    // from here too, unlike the config itself.
+                    if (EventCore.getInstance().getSettings().isLogUpdatesInConsole()) {
                         log();
                     }
                 }
             } catch (Exception exception) {
                 EventCore.LOGGER.warn("Failed to check for updates: {}", exception.getMessage());
+            } finally {
+                // Closes the socket, which otherwise stays open until garbage collected when the response isn't read
+                // (error status). Checks are an hour apart, so there's no point keeping it alive for reuse.
+                if (connection != null) {
+                    connection.disconnect();
+                }
             }
         });
     }

@@ -4,6 +4,7 @@ import me.david.EventCore;
 import me.david.command.BukkitCommand;
 import me.david.util.BorderUtil;
 import me.david.util.MessageUtil;
+import me.david.util.PlayerUtil;
 import me.david.util.folia.FoliaScheduler;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -81,7 +82,7 @@ public class EventCommand extends BukkitCommand {
             if (args[0].equalsIgnoreCase("kickspec")) {
                 for (final Player target : Bukkit.getOnlinePlayers()) {
                     if (!(target.hasPermission("event.spec")) && target.getGameMode() == GameMode.SPECTATOR) {
-                        target.kick();
+                        PlayerUtil.runFor(target, Player::kick);
                     }
                 }
 
@@ -92,7 +93,7 @@ public class EventCommand extends BukkitCommand {
             if (args[0].equalsIgnoreCase("kickall")) {
                 for (final Player target : Bukkit.getOnlinePlayers()) {
                     if (!(target.hasPermission("event.spec"))) {
-                        target.kick();
+                        PlayerUtil.runFor(target, Player::kick);
                     }
                 }
                 player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("All players has been kicked!")));
@@ -100,10 +101,10 @@ public class EventCommand extends BukkitCommand {
             }
 
             if (args[0].equalsIgnoreCase("clearall")) {
-                for (final Player target : Bukkit.getOnlinePlayers()) {
+                PlayerUtil.runForAll(target -> {
                     target.getInventory().setArmorContents(null);
                     target.getInventory().clear();
-                }
+                });
                 player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("All players has been cleared!")));
                 return;
             }

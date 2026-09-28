@@ -4,10 +4,13 @@ import lombok.experimental.UtilityClass;
 import me.david.EventCore;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
+import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -20,6 +23,9 @@ public class MessageUtil {
     // Translated config messages. Swapped for a fresh map on config reload, so a lookup racing
     // the reload can only ever write into the discarded map.
     private volatile Map<String, Component> cache = new ConcurrentHashMap<>();
+
+    // Patterns matching any placeholder of a set, by set. The code only uses a handful of different sets.
+    private final Map<Set<String>, Pattern> PLACEHOLDER_PATTERNS = new ConcurrentHashMap<>();
 
     public Component get(@NotNull String key) {
         return cache.computeIfAbsent(key, k -> translateColorCodes(EventCore.getInstance().getConfig().getString(k, "")));
@@ -34,14 +40,28 @@ public class MessageUtil {
     }
 
     public @NotNull Component format(@NotNull String key, @NotNull Map<String, ? extends ComponentLike> replacements) {
-        Component component = get(key);
-        for (var entry : replacements.entrySet()) {
-            component = component.replaceText(builder -> builder
-                    .matchLiteral(entry.getKey())
-                    .replacement(entry.getValue())
-            );
+        final Component component = get(key);
+        if (replacements.isEmpty()) return component;
+
+        // Replaces all placeholders in a single pass over the component, instead of one pass (with a freshly
+        // compiled pattern) per placeholder.
+        return component.replaceText(TextReplacementConfig.builder()
+                .match(placeholderPattern(replacements.keySet()))
+                .replacement((match, original) -> replacements.get(match.group()))
+                .build());
+    }
+
+    private Pattern placeholderPattern(@NotNull Set<String> placeholders) {
+        Pattern pattern = PLACEHOLDER_PATTERNS.get(placeholders);
+        if (pattern == null) {
+            final StringJoiner alternatives = new StringJoiner("|");
+            for (String placeholder : placeholders) {
+                alternatives.add(Pattern.quote(placeholder));
+            }
+            pattern = Pattern.compile(alternatives.toString());
+            PLACEHOLDER_PATTERNS.put(Set.copyOf(placeholders), pattern);
         }
-        return component;
+        return pattern;
     }
 
     @NotNull

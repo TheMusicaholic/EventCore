@@ -5,7 +5,9 @@ import me.david.EventCore;
 import me.david.api.events.map.MapDropEvent;
 import me.david.api.events.map.MapResetEvent;
 import me.david.api.events.map.SpawnLocationChangeEvent;
+import me.david.util.CommandUtil;
 import me.david.util.LocationUtil;
+import me.david.util.Settings;
 import me.david.util.folia.FoliaScheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -15,7 +17,8 @@ import org.jetbrains.annotations.NotNull;
 @Getter
 public class MapManager implements me.david.api.manager.MapManager {
 
-    private Location spawnLocation;
+    // Set on the global region, read from every region's thread on Folia.
+    private volatile Location spawnLocation;
 
     public MapManager() {
         FoliaScheduler.getGlobalRegionScheduler().runDelayed(EventCore.getInstance(), o -> spawnLocation = LocationUtil.fromString(EventCore.getInstance().getConfig().getString("Settings.SpawnLocation", "world/0/200/0")), 2);
@@ -40,7 +43,9 @@ public class MapManager implements me.david.api.manager.MapManager {
     }
 
     public void drop() {
-        long borderExtra = EventCore.getInstance().getConfig().getLong("Settings.Drop.BorderExtra", 3);
+        final Settings settings = EventCore.getInstance().getSettings();
+        final Location spawnLocation = this.spawnLocation;
+        long borderExtra = settings.getDropBorderExtra();
         double borderSize = spawnLocation.getWorld().getWorldBorder().getSize();
 
         final MapDropEvent mapDropEvent = new MapDropEvent(spawnLocation, borderSize);
@@ -58,8 +63,7 @@ public class MapManager implements me.david.api.manager.MapManager {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "/pos1 " + edgeMin.getBlockX() + ",-63," + edgeMin.getBlockZ());
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "/pos2 " + edgeMax.getBlockX() + ",350," + edgeMax.getBlockZ());
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "/set 0");
-            EventCore.getInstance().getConfig().getStringList("Settings.Drop.CustomCommands").forEach(command ->
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.substring(1)));
+            settings.getDropCommands().forEach(CommandUtil::dispatchNow);
         });
     }
 
@@ -71,8 +75,7 @@ public class MapManager implements me.david.api.manager.MapManager {
             return;
         }
 
-        FoliaScheduler.getGlobalRegionScheduler().execute(EventCore.getInstance(), () -> EventCore.getInstance().getConfig().getStringList("Settings.MapReset.Commands").forEach(command ->
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.substring(1))));
+        EventCore.getInstance().getSettings().getMapResetCommands().forEach(CommandUtil::dispatch);
     }
 
 }

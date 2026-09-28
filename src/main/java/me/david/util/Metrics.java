@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
+import me.david.util.folia.FoliaScheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -162,6 +163,15 @@ public class Metrics {
     }
 
     /**
+     * Stops the scheduler and its thread. Call this when the plugin is disabled: otherwise the thread only notices
+     * on its next submit (up to 30 minutes later) and keeps the disabled plugin in memory until then.
+     */
+    public void shutdown() {
+        // shutdownNow() also drops the pending first submit, which shutdown() would still wait for.
+        scheduler.shutdownNow();
+    }
+
+    /**
      * Adds a custom chart.
      *
      * @param chart The chart to add.
@@ -184,7 +194,8 @@ public class Metrics {
             }
             // Nevertheless we want our code to run in the Bukkit main thread, so we have to use the Bukkit scheduler
             // Don't be afraid! The connection to the bStats server is still async, only the stats collection is sync ;)
-            Bukkit.getScheduler().runTask(plugin, this::submitData);
+            // (The global region is the main thread on Paper. Folia doesn't support the Bukkit scheduler at all.)
+            FoliaScheduler.getGlobalRegionScheduler().execute(plugin, this::submitData);
         };
 
         // Many servers tend to restart at a fixed time at xx:00 which causes an uneven distribution of requests on the

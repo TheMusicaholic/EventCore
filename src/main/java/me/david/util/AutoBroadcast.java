@@ -1,7 +1,6 @@
 package me.david.util;
 
 import me.david.EventCore;
-import me.david.util.folia.FoliaScheduler;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -27,11 +26,8 @@ public class AutoBroadcast implements Runnable {
 
         String message = messages.get(index);
         if (settings.isAutoBroadcastUseCommand()) {
-            final String command = settings.getAutoBroadcastCommand().replace("%message%", message);
-            // Configured with a leading slash like the other commands in config.yml, but dispatchCommand expects none.
-            final String commandLine = command.startsWith("/") ? command.substring(1) : command;
             // This task runs async, but commands may only be dispatched from the server (global region) thread.
-            FoliaScheduler.getGlobalRegionScheduler().execute(EventCore.getInstance(), () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), commandLine));
+            CommandUtil.dispatch(settings.getAutoBroadcastCommand().replace("%message%", message));
         } else {
             final Component component = MessageUtil.translateColorCodes(message);
             for (Player player : Bukkit.getOnlinePlayers()) {
