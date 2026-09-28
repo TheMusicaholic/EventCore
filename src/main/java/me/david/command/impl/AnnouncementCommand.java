@@ -51,9 +51,10 @@ public class AnnouncementCommand extends BukkitCommand {
                     player.showTitle(title);
                 }
             }
+            return;
         }
 
-        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: Â§c/annoucement <message>")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/annoucement <message>")));
     }
 
     @Override
