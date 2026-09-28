@@ -37,7 +37,7 @@ public class AnnouncementCommand extends BukkitCommand {
             // Same message for everyone, so format it once instead of once per player.
             final Component formatted = MessageUtil.format("Messages.AnnoucementCommand.MessageFormat", replacements);
             Title title = null;
-            if (plugin.getConfig().getBoolean("Messages.AnnoucementCommand.Title.Enabled")) {
+            if (plugin.getSettings().isAnnouncementTitleEnabled()) {
                 Component titleComponent = MessageUtil.format("Messages.AnnoucementCommand.Title.Title", replacements);
                 Component subTitleComponent = MessageUtil.format("Messages.AnnoucementCommand.Title.SubTitle", replacements);
 
@@ -51,9 +51,10 @@ public class AnnouncementCommand extends BukkitCommand {
                     player.showTitle(title);
                 }
             }
+            return;
         }
 
-        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: Â§c/annoucement <message>")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/annoucement <message>")));
     }
 
     @Override

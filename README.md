@@ -79,6 +79,7 @@ mapManager.drop();
 | `/event clearall`              | Clear all player inventories                            |
 | `/kit <player>`                | Give a player the saved kit                             |
 | `/kit *`                       | Give all players the saved kit                          |
+| `/kit give <player/*> <name>`  | Give a player (or everyone with `*`) a specific kit     |
 | `/kit enable <name>`           | Enable a kit                                            |
 | `/kit save <name>`             | Saves your current inventory as kit                     |
 | `/kit delete <name>`           | Delete a kit                                            |

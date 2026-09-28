@@ -7,8 +7,10 @@ import me.david.api.events.game.GameStopEvent;
 import me.david.api.events.game.GameTimerTickEvent;
 import me.david.api.events.game.InGameTimerTickEvent;
 import me.david.util.BorderUtil;
+import me.david.util.CommandUtil;
 import me.david.util.MessageUtil;
 import me.david.util.PlayerUtil;
+import me.david.util.Settings;
 import me.david.util.folia.FoliaScheduler;
 import me.david.util.folia.TaskWrapper;
 import net.kyori.adventure.text.Component;
@@ -18,6 +20,7 @@ import org.bukkit.entity.Player;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Getter
 public class GameManager implements me.david.api.manager.GameManager {
@@ -26,24 +29,27 @@ public class GameManager implements me.david.api.manager.GameManager {
     private volatile boolean running = false;
     private volatile boolean timerRunning = false;
 
-    private TaskWrapper startTask;
-    private TaskWrapper autoStopTask;
-    private TaskWrapper autoDropTask;
-    private TaskWrapper timerTask;
+    // Replaced and cancelled from different threads on Folia (commands, and the countdown on the global region).
+    private volatile TaskWrapper startTask;
+    private volatile TaskWrapper autoStopTask;
+    private volatile TaskWrapper autoDropTask;
+    private volatile TaskWrapper timerTask;
 
-    private AtomicInteger timer;
-    private long inGameTimer;
-    private boolean autoDropped = false;
+    private volatile AtomicInteger timer;
+    private volatile long inGameTimer;
+    private volatile boolean autoDropped = false;
 
     public void start() {
         stopAllTimers();
         if (timerRunning) return;
 
+        final Settings settings = EventCore.getInstance().getSettings();
+
         running = false;
         autoDropped = false;
         timerRunning = true;
 
-        timer = new AtomicInteger(EventCore.getInstance().getConfig().getInt("Messages.StartTimer.Timer", 5));
+        timer = new AtomicInteger(settings.getStartTimerSeconds());
 
         final GameStartEvent gameStartEvent = new GameStartEvent(timer.get());
         Bukkit.getPluginManager().callEvent(gameStartEvent);
@@ -53,7 +59,8 @@ public class GameManager implements me.david.api.manager.GameManager {
             return;
         }
 
-        startTask = FoliaScheduler.getGlobalRegionScheduler().runAtFixedRate(EventCore.getInstance(), o -> {
+        final AtomicReference<TaskWrapper> countdown = new AtomicReference<>();
+        countdown.set(FoliaScheduler.getGlobalRegionScheduler().runAtFixedRate(EventCore.getInstance(), o -> {
             if (!timerRunning || running) return;
 
             int current = timer.get();
@@ -65,8 +72,7 @@ public class GameManager implements me.david.api.manager.GameManager {
             final Title title;
             final Sound sound;
             if (current > 0) {
-                String color = EventCore.getInstance().getConfig().getString("Messages.StartTimer.Colors." + current + "sec");
-                String timerText = color + current + "§7";
+                String timerText = settings.getStartTimerColor(current) + current + "§7";
 
                 final var replacements = Map.of(
                         "%timer%", MessageUtil.translateColorCodes(timerText),
@@ -85,7 +91,8 @@ public class GameManager implements me.david.api.manager.GameManager {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 player.sendMessage(message);
                 player.showTitle(title);
-                player.playSound(player.getLocation(), sound, 5, 5);
+                // Played at the player entity: no Location to allocate, and no reading another region's player position.
+                player.playSound(player, sound, 5, 5);
             }
 
             if (current <= 0) {
@@ -93,28 +100,29 @@ public class GameManager implements me.david.api.manager.GameManager {
                     world.setDifficulty(Difficulty.HARD);
                 }
 
-                if (EventCore.getInstance().getConfig().getBoolean("Settings.IngameTimer.Enabled") && !EventCore.getInstance().getConfig().getBoolean("Messages.Actionbar.Enabled")) {
+                if (settings.isIngameTimerEnabled() && !settings.isActionbarEnabled()) {
                     startInGameTimer();
                 }
 
-                EventCore.getInstance().getConfig().getStringList("Settings.Start.CustomCommands")
-                        .forEach(command -> FoliaScheduler.getGlobalRegionScheduler().execute(EventCore.getInstance(),
-                                () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.substring(1)))
-                        );
+                for (String command : settings.getStartCommands()) {
+                    CommandUtil.dispatch(command);
+                }
 
                 running = true;
                 timerRunning = false;
 
-                if (startTask != null) {
-                    startTask.cancel();
-                    startTask = null;
+                // Cancel through this countdown's own handle: startTask may already belong to a newer countdown.
+                final TaskWrapper self = countdown.get();
+                if (self != null) {
+                    self.cancel();
                 }
             } else {
                 timer.decrementAndGet();
             }
-        }, 0, 20);
+        }, 0, 20));
+        startTask = countdown.get();
 
-        if (EventCore.getInstance().getConfig().getBoolean("Settings.AutoStop1Player")) {
+        if (settings.isAutoStopOnOnePlayer()) {
             autoStopTask = FoliaScheduler.getGlobalRegionScheduler().runAtFixedRate(EventCore.getInstance(), o -> {
                 if (running && PlayerUtil.getAlive() == 1) {
                     running = false;
@@ -129,7 +137,7 @@ public class GameManager implements me.david.api.manager.GameManager {
             }, 0, 20);
         }
 
-        if (EventCore.getInstance().getConfig().getBoolean("Settings.DropOnPlayerCount.Enabled")) {
+        if (settings.isDropOnPlayerCountEnabled()) {
             autoDropTask = FoliaScheduler.getGlobalRegionScheduler().runAtFixedRate(EventCore.getInstance(), o -> {
                 if (running && !autoDropped && PlayerUtil.getAlive() <= EventCore.getInstance().getSettings().getDropOnPlayerCount()) {
                     autoDropped = true;
@@ -147,6 +155,9 @@ public class GameManager implements me.david.api.manager.GameManager {
             return;
         }
 
+        final EventCore plugin = EventCore.getInstance();
+        final Settings settings = plugin.getSettings();
+
         running = false;
         timerRunning = false;
         BorderUtil.lastOptimal = BorderUtil.borderDefault;
@@ -155,7 +166,8 @@ public class GameManager implements me.david.api.manager.GameManager {
         stopAllTimers();
 
         final var replacements = Map.of(
-                "%winner%", MessageUtil.translateColorCodes(winner),
+                // There's no winner when stopped without one (through the API, or on shutdown).
+                "%winner%", MessageUtil.translateColorCodes(winner != null ? winner : "Unknown"),
                 "%prefix%", MessageUtil.getPrefix()
         );
 
@@ -165,32 +177,31 @@ public class GameManager implements me.david.api.manager.GameManager {
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.sendMessage(message);
             player.showTitle(title);
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 5, 5);
-            PlayerUtil.cleanPlayer(player);
+            player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 5, 5);
+            PlayerUtil.runFor(player, PlayerUtil::cleanPlayer);
         }
 
-        for (World world : Bukkit.getWorlds()) {
-            world.setDifficulty(Difficulty.PEACEFUL);
-            world.getWorldBorder().setSize(BorderUtil.borderDefault);
+        // On Folia worlds may only be changed from the global region, and /event stop runs on the sender's region.
+        FoliaScheduler.getGlobalRegionScheduler().runNowOrSchedule(plugin, () -> {
+            for (World world : Bukkit.getWorlds()) {
+                world.setDifficulty(Difficulty.PEACEFUL);
+                world.getWorldBorder().setSize(BorderUtil.borderDefault);
+            }
+        });
+
+        for (String command : settings.getStopCommands()) {
+            CommandUtil.dispatch(command);
         }
 
-        EventCore.getInstance().getConfig().getStringList("Settings.Stop.CustomCommands")
-                .forEach(cmd -> FoliaScheduler.getGlobalRegionScheduler().execute(EventCore.getInstance(),
-                        () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.substring(1)))
-                );
-
-        if (EventCore.getInstance().getConfig().getBoolean("Settings.MapReset.AutoReset")) {
-            EventCore.getInstance().getMapManager().reset();
+        if (settings.isMapAutoReset()) {
+            plugin.getMapManager().reset();
         }
     }
 
     public void startInGameTimer() {
         inGameTimer = 0;
 
-        if (timerTask != null) {
-            timerTask.cancel();
-            timerTask = null;
-        }
+        timerTask = cancel(timerTask);
 
         timerTask = FoliaScheduler.getGlobalRegionScheduler().runAtFixedRate(EventCore.getInstance(), o -> {
             inGameTimer++;
@@ -212,18 +223,22 @@ public class GameManager implements me.david.api.manager.GameManager {
 
     public void stopInGameTimer() {
         inGameTimer = 0;
-        if (timerTask != null) {
-            timerTask.cancel();
-            timerTask = null;
-        }
+        timerTask = cancel(timerTask);
     }
 
     private void stopAllTimers() {
         timerRunning = false;
 
-        if (startTask != null) { startTask.cancel(); startTask = null; }
-        if (autoStopTask != null) { autoStopTask.cancel(); autoStopTask = null; }
-        if (autoDropTask != null) { autoDropTask.cancel(); autoDropTask = null; }
-        if (timerTask != null) { timerTask.cancel(); timerTask = null; }
+        startTask = cancel(startTask);
+        autoStopTask = cancel(autoStopTask);
+        autoDropTask = cancel(autoDropTask);
+        timerTask = cancel(timerTask);
+    }
+
+    // Takes the task as an argument so the field is read only once (another thread may clear it in between).
+    // Returns null, to clear the field with.
+    private static TaskWrapper cancel(final TaskWrapper task) {
+        if (task != null) task.cancel();
+        return null;
     }
 }

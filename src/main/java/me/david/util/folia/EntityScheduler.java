@@ -29,6 +29,19 @@ public class EntityScheduler {
         entity.getScheduler().execute(plugin, run, retired, delay);
     }
 
+    /**
+     * Runs the task on the thread that owns the entity: right away when called from it (always the case on Paper's
+     * main thread), otherwise on the entity's next tick. Nothing can be scheduled while the plugin is being disabled,
+     * so the task is skipped then unless it can run right away.
+     */
+    public void runNowOrSchedule(@NotNull Entity entity, @NotNull Plugin plugin, @NotNull Runnable run) {
+        if (FoliaScheduler.isFolia ? Bukkit.isOwnedByCurrentRegion(entity) : Bukkit.isPrimaryThread()) {
+            run.run();
+        } else if (plugin.isEnabled()) {
+            execute(entity, plugin, run, null, 1);
+        }
+    }
+
     public TaskWrapper run(@NotNull Entity entity, @NotNull Plugin plugin, @NotNull Consumer<Object> task, @Nullable Runnable retired) {
         if (!FoliaScheduler.isFolia) {
             return new TaskWrapper(bukkitScheduler.runTask(plugin, () -> task.accept(null)));

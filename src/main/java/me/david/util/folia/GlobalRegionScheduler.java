@@ -31,6 +31,19 @@ public class GlobalRegionScheduler {
         globalRegionScheduler.execute(plugin, run);
     }
 
+    /**
+     * Runs the task on the global region: right away when called from it (always the case on Paper's main thread),
+     * otherwise on its next tick. Nothing can be scheduled while the plugin is being disabled, so the task is skipped
+     * then unless it can run right away.
+     */
+    public void runNowOrSchedule(@NotNull Plugin plugin, @NotNull Runnable run) {
+        if (FoliaScheduler.isFolia ? Bukkit.isGlobalTickThread() : Bukkit.isPrimaryThread()) {
+            run.run();
+        } else if (plugin.isEnabled()) {
+            execute(plugin, run);
+        }
+    }
+
     public TaskWrapper run(@NotNull Plugin plugin, @NotNull Consumer<Object> task) {
         if (!FoliaScheduler.isFolia) {
             return new TaskWrapper(bukkitScheduler.runTask(plugin, () -> task.accept(null)));

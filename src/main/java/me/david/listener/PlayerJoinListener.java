@@ -4,13 +4,11 @@ import me.david.EventCore;
 import me.david.util.*;
 import me.david.util.folia.FoliaScheduler;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.inventory.ItemStack;
 
 import java.util.Map;
 
@@ -24,8 +22,7 @@ public class PlayerJoinListener implements Listener {
         HostUtil.giveHost(player);
 
         for (String command : settings.getPlayerJoinCommands()) {
-            final String finalCommand = command.replace("%player%", player.getName()).substring(1);
-            FoliaScheduler.getGlobalRegionScheduler().execute(EventCore.getInstance(), () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand));
+            CommandUtil.dispatch(command.replace("%player%", player.getName()));
         }
 
         if (settings.isJoinMessageEnabled()) {
@@ -35,12 +32,8 @@ public class PlayerJoinListener implements Listener {
             event.joinMessage(Component.empty());
         }
 
-        PlayerUtil.cleanPlayer(player);
-        if (EventCore.getInstance().getGameManager().isRunning()) {
-            player.getInventory().setArmorContents(new ItemStack[4]);
-            player.getInventory().clear();
-            player.setGameMode(GameMode.SPECTATOR);
-        }
+        // Late joiners only spectate, so they go straight to spectator without the kit (which would be cleared again).
+        PlayerUtil.resetPlayer(player, EventCore.getInstance().getGameManager().isRunning() ? GameMode.SPECTATOR : GameMode.SURVIVAL);
         FoliaScheduler.getEntityScheduler().runDelayed(player, EventCore.getInstance(), o -> {
             player.teleportAsync(EventCore.getInstance().getMapManager().getSpawnLocation());
             if (EventCore.getInstance().getGameManager().isRunning()) {

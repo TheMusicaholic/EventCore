@@ -16,7 +16,9 @@ import java.util.List;
 
 public final class PlaceholderHook extends PlaceholderExpansion {
 
-    private static final DecimalFormat KD_FORMAT = new DecimalFormat("#0.00");
+    // DecimalFormat isn't thread-safe, and placeholders are requested from several threads at once (async
+    // scoreboards, region threads on Folia), so each thread gets its own.
+    private static final ThreadLocal<DecimalFormat> KD_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("#0.00"));
 
     @Override
     public @NotNull String getIdentifier() {
@@ -77,7 +79,7 @@ public final class PlaceholderHook extends PlaceholderExpansion {
         final double kills = player.getStatistic(Statistic.PLAYER_KILLS);
         final double deaths = player.getStatistic(Statistic.DEATHS);
         final double ratio = deaths == 0 ? kills : kills / deaths;
-        return KD_FORMAT.format(Math.max(0, ratio));
+        return KD_FORMAT.get().format(Math.max(0, ratio));
     }
 
     private static int countTotems(final @NotNull Player player) {

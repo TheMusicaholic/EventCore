@@ -1,8 +1,10 @@
 package me.david;
 
+import lombok.AccessLevel;
 import lombok.Getter;
 import me.clip.placeholderapi.PlaceholderAPI;
 import me.david.api.EventCoreAPI;
+import me.david.command.BukkitCommand;
 import me.david.command.impl.*;
 import me.david.listener.*;
 import me.david.listener.canvas.CanvasPlayerRespawnListener;
@@ -31,6 +33,12 @@ public class EventCore extends JavaPlugin {
     private MapManager mapManager;
     private GameManager gameManager;
     private KitManager kitManager;
+
+    // Neither is released by the server when the plugin is disabled, see onDisable().
+    @Getter(AccessLevel.NONE)
+    private PlaceholderHook placeholderHook;
+    @Getter(AccessLevel.NONE)
+    private Metrics metrics;
 
     @Override
     public void onEnable() {
@@ -74,9 +82,10 @@ public class EventCore extends JavaPlugin {
             Bukkit.getPluginManager().registerEvents(new PlayerTeleportListener(), instance);
         }
 
-        final boolean placeholderApi = Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null;
+        final boolean placeholderApi = Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI");
         if (placeholderApi) {
-            new PlaceholderHook().register();
+            placeholderHook = new PlaceholderHook();
+            placeholderHook.register();
         }
 
         final BorderUtil borderUtil = new BorderUtil();
@@ -92,7 +101,7 @@ public class EventCore extends JavaPlugin {
             world.getWorldBorder().setDamageAmount(BorderUtil.borderDamageAmount);
         }, 40L);
 
-        if (getConfig().getBoolean("Messages.Actionbar.Enabled")) {
+        if (settings.isActionbarEnabled()) {
             FoliaScheduler.getAsyncScheduler().runAtFixedRate(instance, o -> {
                 final String raw = settings.getActionbarMessage();
 
@@ -114,7 +123,7 @@ public class EventCore extends JavaPlugin {
         }
 
         if (getConfig().getBoolean("Settings.Metrics")) {
-            new Metrics(instance, 28277);
+            metrics = new Metrics(instance, 28277);
         }
     }
 
@@ -130,10 +139,24 @@ public class EventCore extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if (gameManager.isRunning()) {
-            gameManager.stop(null);
+        try {
+            if (gameManager != null && gameManager.isRunning()) {
+                gameManager.stop(null);
+            }
+        } finally {
+            // The server cancels tasks and unregisters listeners and services on its own, but none of these. Each
+            // would keep the disabled plugin in memory (and working half-way) until the server stops.
+            BukkitCommand.unregisterAll();
+            if (placeholderHook != null) {
+                placeholderHook.unregister();
+                placeholderHook = null;
+            }
+            if (metrics != null) {
+                metrics.shutdown();
+                metrics = null;
+            }
+            EventCoreAPI.shutdown();
         }
-        EventCoreAPI.shutdown();
     }
 
 }

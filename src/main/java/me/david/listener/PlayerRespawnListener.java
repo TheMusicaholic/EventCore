@@ -14,8 +14,7 @@ public class PlayerRespawnListener implements Listener {
     public void onPlayerRespawn(PlayerRespawnEvent event) {
         final Player player = event.getPlayer();
         event.setRespawnLocation(EventCore.getInstance().getMapManager().getSpawnLocation());
-        PlayerUtil.cleanPlayer(player);
-        player.setGameMode(GameMode.SPECTATOR);
+        PlayerUtil.resetPlayer(player, GameMode.SPECTATOR);
     }
 
 }

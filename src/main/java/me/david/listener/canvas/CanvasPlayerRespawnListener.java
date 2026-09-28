@@ -5,7 +5,6 @@ import io.canvasmc.canvas.event.PlayerRespawnAsyncEvent;
 import me.david.EventCore;
 import me.david.util.PlayerUtil;
 import org.bukkit.GameMode;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
@@ -18,9 +17,8 @@ public class CanvasPlayerRespawnListener implements Listener {
 
     @EventHandler
     public void onPlayerPostRespawn(PlayerPostRespawnAsyncEvent event) {
-        final Player player = event.getPlayer();
-        PlayerUtil.cleanPlayer(player);
-        player.setGameMode(GameMode.SPECTATOR);
+        // An async event, so make sure the player is changed from the thread that owns them.
+        PlayerUtil.runFor(event.getPlayer(), player -> PlayerUtil.resetPlayer(player, GameMode.SPECTATOR));
     }
 
 }

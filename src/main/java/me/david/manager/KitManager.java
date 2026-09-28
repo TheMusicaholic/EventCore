@@ -7,11 +7,13 @@ import me.david.api.events.kit.KitEnableEvent;
 import me.david.api.events.kit.KitGiveEvent;
 import me.david.api.events.kit.KitSaveEvent;
 import me.david.util.MessageUtil;
+import me.david.util.PlayerUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -34,18 +36,39 @@ public class KitManager implements me.david.api.manager.KitManager {
     }
 
     public void give(@NotNull final Player player) {
-        Map<Integer, ItemStack> kitItems = kits.get(enabledKit);
+        give(player, true);
+    }
+
+    /**
+     * Gives the player the enabled kit in place of their inventory.
+     *
+     * @param clear whether the inventory still has to be cleared first (false if the caller just cleared it)
+     */
+    public void give(@NotNull final Player player, final boolean clear) {
+        give(player, enabledKit, clear);
+    }
+
+    /**
+     * Gives the player the given kit in place of their inventory. Does nothing if there's no such kit.
+     *
+     * @param clear whether the inventory still has to be cleared first (false if the caller just cleared it)
+     */
+    public void give(@NotNull final Player player, @NotNull final String kit, final boolean clear) {
+        Map<Integer, ItemStack> kitItems = kits.get(kit);
         if (kitItems == null || kitItems.isEmpty()) return;
 
-        KitGiveEvent kitGiveEvent = new KitGiveEvent(player, enabledKit);
+        KitGiveEvent kitGiveEvent = new KitGiveEvent(player, kit);
         Bukkit.getPluginManager().callEvent(kitGiveEvent);
         if (kitGiveEvent.isCancelled()) return;
 
-        player.getInventory().clear();
-        player.getInventory().setArmorContents(new ItemStack[4]);
+        final PlayerInventory inventory = player.getInventory();
+        if (clear) {
+            inventory.clear();
+            inventory.setArmorContents(new ItemStack[4]);
+        }
 
         for (Map.Entry<Integer, ItemStack> entry : kitItems.entrySet()) {
-            player.getInventory().setItem(entry.getKey(), entry.getValue());
+            inventory.setItem(entry.getKey(), entry.getValue());
         }
     }
 
@@ -125,7 +148,7 @@ public class KitManager implements me.david.api.manager.KitManager {
         EventCore.getInstance().getConfig().set("Kits.EnabledKit", kit);
         EventCore.getInstance().saveConfig();
 
-        Bukkit.getOnlinePlayers().forEach(this::give);
+        PlayerUtil.runForAll(this::give);
     }
 
     public void delete(@NotNull final String kit) {

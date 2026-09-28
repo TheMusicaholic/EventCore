@@ -3,6 +3,7 @@ package me.david.command.impl;
 import me.david.EventCore;
 import me.david.command.BukkitCommand;
 import me.david.util.MessageUtil;
+import me.david.util.PlayerUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -27,7 +28,7 @@ public class KitCommand extends BukkitCommand {
 
         if (args.length == 1) {
             if (args[0].equalsIgnoreCase("*")) {
-                Bukkit.getOnlinePlayers().forEach(plugin.getKitManager()::give);
+                PlayerUtil.runForAll(plugin.getKitManager()::give);
                 player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Everyone §7has been equipped!")));
                 return;
             }
@@ -38,7 +39,7 @@ public class KitCommand extends BukkitCommand {
                 return;
             }
 
-            plugin.getKitManager().give(target);
+            PlayerUtil.runFor(target, plugin.getKitManager()::give);
             player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§a" + target.getName() + " §7has been equipped!")));
             return;
         }
@@ -80,7 +81,35 @@ public class KitCommand extends BukkitCommand {
             }
         }
 
+        if (args.length == 3) {
+            if (args[0].equalsIgnoreCase("give")) {
+                final String kit = args[2].toLowerCase();
+
+                if (!plugin.getKitManager().getKits().containsKey(kit)) {
+                    player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§cThis kit does not exist!")));
+                    return;
+                }
+
+                if (args[1].equalsIgnoreCase("*")) {
+                    PlayerUtil.runForAll(target -> plugin.getKitManager().give(target, kit, true));
+                    player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Everyone §7has been equipped with §a" + kit + "§7!")));
+                    return;
+                }
+
+                final Player target = Bukkit.getPlayer(args[1]);
+                if (target == null) {
+                    player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("This player is not online!")));
+                    return;
+                }
+
+                PlayerUtil.runFor(target, receiver -> plugin.getKitManager().give(receiver, kit, true));
+                player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§a" + target.getName() + " §7has been equipped with §a" + kit + "§7!")));
+                return;
+            }
+        }
+
         player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/kit <player>")));
+        player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/kit give <player/*> <kit>")));
         player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/kit enable <kit>")));
         player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/kit save <kit>")));
         player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/kit delete <kit>")));
@@ -92,13 +121,23 @@ public class KitCommand extends BukkitCommand {
         if (!(player.hasPermission("event.command.kit"))) return new ArrayList<>();
         final List<String> list = new ArrayList<>();
 
-        if (args.length == 2) {
+        if (args.length == 3 && args[0].equalsIgnoreCase("give")) {
             list.addAll(plugin.getKitManager().getKits().keySet());
+        }
+
+        if (args.length == 2) {
+            if (args[0].equalsIgnoreCase("give")) {
+                list.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
+                list.add("*");
+            } else {
+                list.addAll(plugin.getKitManager().getKits().keySet());
+            }
         }
 
         if (args.length == 1) {
             list.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
             list.add("*");
+            list.add("give");
             list.add("enable");
             list.add("save");
             list.add("delete");
