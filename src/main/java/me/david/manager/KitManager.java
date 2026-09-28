@@ -45,7 +45,15 @@ public class KitManager implements me.david.api.manager.KitManager {
      * @param clear whether the inventory still has to be cleared first (false if the caller just cleared it)
      */
     public void give(@NotNull final Player player, final boolean clear) {
-        final String kit = enabledKit;
+        give(player, enabledKit, clear);
+    }
+
+    /**
+     * Gives the player the given kit in place of their inventory. Does nothing if there's no such kit.
+     *
+     * @param clear whether the inventory still has to be cleared first (false if the caller just cleared it)
+     */
+    public void give(@NotNull final Player player, @NotNull final String kit, final boolean clear) {
         Map<Integer, ItemStack> kitItems = kits.get(kit);
         if (kitItems == null || kitItems.isEmpty()) return;
 
