@@ -2,7 +2,6 @@ package me.david.listener;
 
 import me.david.EventCore;
 import me.david.util.MessageUtil;
-import me.david.util.PlayerUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
@@ -41,8 +40,9 @@ public class PlayerDeathListener implements Listener {
 
         event.setKeepLevel(true);
         event.setDroppedExp(0);
-
-        PlayerUtil.resetPlayer(player, GameMode.SPECTATOR);
+        // The player is turned into a spectator once they've respawned (see the respawn listeners). Changing their
+        // health or game mode here, while they're still dead, desyncs them from the client: after respawning they
+        // can't move until they rejoin.
     }
 
 }
