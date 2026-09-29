@@ -20,6 +20,7 @@ public final class Settings {
     private final long maxBuildHeight;
     private final boolean disableFallDamage;
     private final boolean disableItemExplosions;
+    private final boolean unbreakableArmor;
     private final boolean allowItemDropBeforeStart;
     private final boolean disableEnderPearlsOutsideBorder;
     private final boolean borderBoostEnabled;
@@ -62,6 +63,7 @@ public final class Settings {
         maxBuildHeight = config.getLong("Settings.MaxBuildHeight", 0L);
         disableFallDamage = config.getBoolean("Settings.DisableFallDamage", true);
         disableItemExplosions = config.getBoolean("Settings.DisableItemExplosions", true);
+        unbreakableArmor = config.getBoolean("Settings.UnbreakableArmor", true);
         allowItemDropBeforeStart = config.getBoolean("Settings.AllowItemDropBeforeStart");
         disableEnderPearlsOutsideBorder = config.getBoolean("Settings.WorldBorder.DisableEnderPeals");
         borderBoostEnabled = config.getBoolean("Settings.WorldBorder.Boost.Enabled");

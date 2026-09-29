@@ -20,6 +20,7 @@ Settings:
   MaxBuildHeight: 300 # Maximum build height
   DisableFallDamage: true # Disable fall damage
   DisableItemExplosions: true # Disable item explosions for End Crystal
+  UnbreakableArmor: true # Armor never loses durability or breaks
   Updates:
     NotifyOnJoin: true
     LogInConsole: false
