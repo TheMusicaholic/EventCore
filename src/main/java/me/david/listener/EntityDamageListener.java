@@ -45,15 +45,20 @@ public class EntityDamageListener implements Listener {
                     double minX = center.getBlockX() - radius;
                     double maxZ = center.getBlockZ() + radius;
                     double minZ = center.getBlockZ() - radius;
+                    // Summed up and applied once: every setVelocity() sends the player a velocity packet.
+                    final Vector boost = new Vector();
                     if (location.getBlockX() > maxX) {
-                        player.setVelocity(player.getVelocity().add(new Vector(-boostXZ, boostY, 0)));
+                        boost.add(new Vector(-boostXZ, boostY, 0));
                     } else if (location.getBlockX() < minX) {
-                        player.setVelocity(player.getVelocity().add(new Vector(boostXZ, boostY, 0)));
+                        boost.add(new Vector(boostXZ, boostY, 0));
                     }
                     if (location.getBlockZ() > maxZ) {
-                        player.setVelocity(player.getVelocity().add(new Vector(0, boostY, -boostXZ)));
+                        boost.add(new Vector(0, boostY, -boostXZ));
                     } else if (location.getBlockZ() < minZ) {
-                        player.setVelocity(player.getVelocity().add(new Vector(0, boostY, boostXZ)));
+                        boost.add(new Vector(0, boostY, boostXZ));
+                    }
+                    if (boost.lengthSquared() != 0) {
+                        player.setVelocity(player.getVelocity().add(boost));
                     }
                 }
             }

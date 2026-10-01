@@ -325,18 +325,23 @@ public class Metrics {
 
         data.add("plugins", pluginData);
 
-        // Create a new thread for the connection to the bStats server
-        new Thread(() -> {
-            try {
-                // Send the data
-                sendData(plugin, data);
-            } catch (Exception e) {
-                // Something went wrong! :(
-                if (logFailedRequests) {
-                    plugin.getLogger().log(Level.WARNING, "Could not submit plugin stats of " + plugin.getName(), e);
+        // Send from the metrics thread instead of a new thread per submit: shutdown() stops it, so no request can
+        // outlive the plugin.
+        try {
+            scheduler.execute(() -> {
+                try {
+                    // Send the data
+                    sendData(plugin, data);
+                } catch (Exception e) {
+                    // Something went wrong! :(
+                    if (logFailedRequests) {
+                        plugin.getLogger().log(Level.WARNING, "Could not submit plugin stats of " + plugin.getName(), e);
+                    }
                 }
-            }
-        }).start();
+            });
+        } catch (RejectedExecutionException ignored) {
+            // Shut down in the meantime (the plugin was disabled).
+        }
     }
 
     /**
@@ -357,7 +362,17 @@ public class Metrics {
             plugin.getLogger().info("Sending data to bStats: " + data);
         }
         HttpsURLConnection connection = (HttpsURLConnection) new URL(URL).openConnection();
+        // Without timeouts an unresponsive bStats server blocks the metrics thread (and keeps the plugin loaded) forever.
+        connection.setConnectTimeout(5000);
+        connection.setReadTimeout(5000);
+        try {
+            sendData(plugin, connection, data);
+        } finally {
+            connection.disconnect();
+        }
+    }
 
+    private static void sendData(Plugin plugin, HttpsURLConnection connection, JsonObject data) throws Exception {
         // Compress the data to save bandwidth
         byte[] compressedData = compress(data.toString());
 

@@ -35,6 +35,8 @@ public class PlayerJoinListener implements Listener {
         // Late joiners only spectate, so they go straight to spectator without the kit (which would be cleared again).
         PlayerUtil.resetPlayer(player, EventCore.getInstance().getGameManager().isRunning() ? GameMode.SPECTATOR : GameMode.SURVIVAL);
         FoliaScheduler.getEntityScheduler().runDelayed(player, EventCore.getInstance(), o -> {
+            // On Paper the task still runs when the player left in the meantime.
+            if (!player.isOnline()) return;
             player.teleportAsync(EventCore.getInstance().getMapManager().getSpawnLocation());
             if (EventCore.getInstance().getGameManager().isRunning()) {
                 player.setGameMode(GameMode.SPECTATOR);
@@ -47,7 +49,7 @@ public class PlayerJoinListener implements Listener {
             updateChecker.check();
 
             FoliaScheduler.getEntityScheduler().runDelayed(player, EventCore.getInstance(), o -> {
-                if (updateChecker.isHasUpdate()) {
+                if (player.isOnline() && updateChecker.isHasUpdate()) {
                     player.sendMessage(Component.empty());
                     player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("You're running an outdated version of EventCore. Please update to the latest version:")));
                     player.sendMessage(updateChecker.getUpdateComponent());

@@ -13,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.text.DecimalFormat;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public final class PlaceholderHook extends PlaceholderExpansion {
 
@@ -90,9 +91,22 @@ public final class PlaceholderHook extends PlaceholderExpansion {
         return totems;
     }
 
+    // Asking spark (and parsing its answer) for every player on every scoreboard refresh adds up, while the 5 minute
+    // average barely moves within a second. A value is reused for one second instead.
+    private static final long TPS_CACHE_NANOS = TimeUnit.SECONDS.toNanos(1);
+    private static volatile String tps = "";
+    private static volatile long tpsExpiry = System.nanoTime();
+
     @SuppressWarnings("deprecation")
     private static @NotNull String formatTPS() {
+        final long now = System.nanoTime();
+        if (now - tpsExpiry < 0) return tps;
+
         final String raw = PlaceholderAPI.setPlaceholders(null, "%spark_tps_5m%");
-        return ChatColor.stripColor(raw.replace("*", "").split("\\.")[0]);
+        final String formatted = ChatColor.stripColor(raw.replace("*", "").split("\\.")[0]);
+        // Written before the expiry, so a caller that sees the new expiry also sees this value.
+        tps = formatted;
+        tpsExpiry = now + TPS_CACHE_NANOS;
+        return formatted;
     }
 }
