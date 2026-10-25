@@ -1,4 +1,6 @@
 [versions]
+# The oldest version EventCore supports. Built against it, the plugin runs on every version up to 26.3: a newer API
+# would let it use what older servers don't have.
 canvas-api = "1.21.11-R0.1-SNAPSHOT"
 lombok = "1.18.48"
 placeholderapi = "2.12.3"

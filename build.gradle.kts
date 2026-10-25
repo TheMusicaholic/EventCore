@@ -11,6 +11,7 @@ description = "Event Server System with tons of useful commands and features"
 
 java {
     toolchain {
+        // Java 21 runs 1.21.11, 26.1+ needs Java 25: built for 21, the plugin runs on both.
         languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
@@ -78,12 +79,16 @@ tasks {
         dependsOn(shadowJar)
     }
 
-    // 1.8.8 - 1.16.5 = Java 8
-    // 1.17           = Java 16
-    // 1.18 - 1.20.4  = Java 17
-    // 1-20.5+        = Java 21
-    val version = "1.21.11"
-    val javaVersion = JavaLanguageVersion.of(21)
+    // The same jar runs on every version from 1.21.11 to 26.3, so the server can be any of them:
+    // ./gradlew runServer -PminecraftVersion=26.3 (1.21.11 if not given)
+    val version = providers.gradleProperty("minecraftVersion").getOrElse("1.21.11")
+
+    // 1.8.8 - 1.16.5   = Java 8
+    // 1.17             = Java 16
+    // 1.18 - 1.20.4    = Java 17
+    // 1.20.5 - 1.21.11 = Java 21
+    // 26.1+            = Java 25
+    val javaVersion = JavaLanguageVersion.of(if (version.startsWith("1.")) 21 else 25)
 
     val jvmArgsExternal = listOf(
         "-Dcom.mojang.eula.agree=true"
@@ -92,6 +97,9 @@ tasks {
     val sharedPlugins = runPaper.downloadPluginsSpec {
         url("https://github.com/ViaVersion/ViaVersion/releases/download/5.12.0/ViaVersion-5.12.0.jar")
         url("https://github.com/ViaVersion/ViaBackwards/releases/download/5.12.0/ViaBackwards-5.12.0.jar")
+        // EventCore depends on it. By id, the Fabric builds have the same version numbers: 7.4.2 is the last one
+        // for 1.21.11 that runs on Java 21, 7.4.6 runs on 26.1 to 26.3 (Java 25).
+        modrinth("worldedit", if (version.startsWith("1.")) "p8T2aZ8U" else "YFnqiUlL")
     }
 
     runServer {
