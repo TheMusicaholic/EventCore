@@ -22,6 +22,9 @@ public class CanvasPlayerRespawnListener implements Listener {
     public void onPlayerPostRespawn(PlayerPostRespawnAsyncEvent event) {
         // An async event, so make sure the player is changed from the thread that owns them.
         PlayerUtil.runFor(event.getPlayer(), player -> {
+            // In case they respawned in another world than they died in (updating twice does nothing).
+            EventCore.getInstance().getEventWorldManager().update(player);
+
             if (EventCore.getInstance().getEventWorldManager().isInEventWorld(player)) {
                 PlayerUtil.resetPlayer(player, GameMode.SPECTATOR);
             }

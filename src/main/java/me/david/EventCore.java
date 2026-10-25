@@ -7,6 +7,7 @@ import me.david.api.EventCoreAPI;
 import me.david.command.BukkitCommand;
 import me.david.command.impl.*;
 import me.david.listener.*;
+import me.david.listener.canvas.CanvasPlayerPortalListener;
 import me.david.listener.canvas.CanvasPlayerRespawnListener;
 import me.david.listener.canvas.CanvasPlayerTeleportListener;
 import me.david.manager.EventWorldManager;
@@ -79,7 +80,9 @@ public class EventCore extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new PlayerPickupItemListener(), instance);
         Bukkit.getPluginManager().registerEvents(new PlayerQuitListener(), instance);
 
+        // Folia breaks the Bukkit teleport, portal and respawn events, and Canvas has its own (async) ones instead.
         if (FoliaScheduler.isCanvas()) {
+            Bukkit.getPluginManager().registerEvents(new CanvasPlayerPortalListener(), instance);
             Bukkit.getPluginManager().registerEvents(new CanvasPlayerRespawnListener(), instance);
             Bukkit.getPluginManager().registerEvents(new CanvasPlayerTeleportListener(), instance);
         } else {

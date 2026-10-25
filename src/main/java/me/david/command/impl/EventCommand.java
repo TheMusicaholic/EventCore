@@ -29,6 +29,8 @@ public class EventCommand extends BukkitCommand {
     }
 
     private String getSoftware() {
+        // Canvas is a Folia fork, so check for it first.
+        if (FoliaScheduler.isCanvas()) return "Canvas";
         return FoliaScheduler.isFolia() ? "Folia" : "PaperMC";
     }
 
