@@ -15,6 +15,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -123,7 +124,16 @@ public class EventWorldManager {
             return;
         }
 
-        Location location = PlayerSnapshot.getReturnLocation(player);
+        leave(player, PlayerSnapshot.getReturnLocation(player));
+    }
+
+    /**
+     * Sends the player out of the event to the location, or to the main world's spawn if there's none or it's in the
+     * event world. Has to run on the player's thread.
+     */
+    public void leave(@NotNull Player player, @Nullable Location location) {
+        if (!isInEventWorld(player)) return;
+
         if (location == null || isEventWorld(location.getWorld())) {
             location = getFallbackLocation();
         }
@@ -277,6 +287,24 @@ public class EventWorldManager {
             if (world.getEnvironment() == World.Environment.NORMAL && !isEventWorld(world)) return world.getSpawnLocation();
         }
         return null;
+    }
+
+    /**
+     * The server's spawn, outside the event (/event kickall): the one set with /setspawn if EssentialsX is installed,
+     * otherwise the main world's spawn. Null if there's no world besides the event world.
+     */
+    public @Nullable Location getServerSpawn() {
+        // Through reflection, so EssentialsX isn't needed to build or run EventCore.
+        final Plugin essentialsSpawn = Bukkit.getPluginManager().getPlugin("EssentialsSpawn");
+        if (essentialsSpawn != null && essentialsSpawn.isEnabled()) {
+            try {
+                final Object spawn = essentialsSpawn.getClass().getMethod("getSpawn", String.class).invoke(essentialsSpawn, "default");
+                if (spawn instanceof Location location && location.isWorldLoaded() && !isEventWorld(location.getWorld())) return location;
+            } catch (ReflectiveOperationException | RuntimeException e) {
+                EventCore.LOGGER.warn("Failed to get the spawn set with /setspawn from EssentialsX, using the main world's spawn instead", e);
+            }
+        }
+        return getFallbackLocation();
     }
 
     /**

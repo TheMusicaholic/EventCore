@@ -10,6 +10,7 @@ import me.david.util.folia.FoliaScheduler;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -134,13 +135,15 @@ public class EventCommand extends BukkitCommand {
                 return;
             }
 
+            // To the server's spawn (/setspawn), not back to where each of them was.
             if (args[0].equalsIgnoreCase("kickall")) {
+                final Location spawn = eventWorld.getServerSpawn();
                 for (final Player target : eventWorld.getPlayers()) {
                     if (!(target.hasPermission("event.spec"))) {
-                        PlayerUtil.runFor(target, eventWorld::leave);
+                        PlayerUtil.runFor(target, player -> eventWorld.leave(player, spawn));
                     }
                 }
-                sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("All players have been sent out of the event!")));
+                sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("All players have been sent out of the event to the spawn!")));
                 return;
             }
 
