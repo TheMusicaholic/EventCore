@@ -25,7 +25,8 @@ The event takes place in one world, `Settings.EventWorld` in the `config.yml`, s
 other worlds. EventCore only works in that world: the rest of the server isn't touched.
 
 - Players join the event with `/event`, which teleports them to the spawn set with `/event setSpawn`, and leave it with
-  `/event leave`, which sends them back to where they were.
+  `/event leave`, which sends them back to where they were. `/event kickall` sends everyone out of the event to the
+  server spawn: the one set with `/setspawn` if EssentialsX is installed, otherwise the main world's spawn.
 - Their own items, ender chest, game mode, health, hunger, experience and effects are put away when they enter the event
   world, in any way, and given back when they leave it, in any way. Nothing can be brought into the event or taken out
   of it. The saved state is kept with the player's data, so it survives restarts and crashes.
@@ -105,7 +106,7 @@ mapManager.drop();
 | `/event whitelist add <name>`  | Add a player to the event whitelist                     |
 | `/event whitelist remove <name>` | Remove a player from the event whitelist              |
 | `/event kickspec`              | Send all spectators out of the event                    |
-| `/event kickall`               | Send all players out of the event (exclude `event.spec`) |
+| `/event kickall`               | Send all players out of the event to the server spawn (exclude `event.spec`) |
 | `/event clearall`              | Clear the inventories of all players in the event       |
 | `/kit <player>`                | Give a player the saved kit                             |
 | `/kit *`                       | Give all players the saved kit                          |
