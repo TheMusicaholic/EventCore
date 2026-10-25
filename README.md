@@ -12,6 +12,9 @@
 2. Put the jar in your plugins folder
 3. Restart your server (not reload)
 
+EventCore runs on [Paper](https://papermc.io/) and [Canvas](https://canvasmc.io/). It needs WorldEdit (used by
+`/event drop`), on Canvas a version with Folia support.
+
 ## Update
 1. Download the new jar from [here](https://github.com/DavidArchive/EventCore/releases/latest)
 2. Replace the old jar with the new one
@@ -27,6 +30,10 @@ other worlds. EventCore only works in that world: the rest of the server isn't t
   world, in any way, and given back when they leave it, in any way. Nothing can be brought into the event or taken out
   of it. The saved state is kept with the player's data, so it survives restarts and crashes.
 - Players who log out in the event world are back in the event when they log in again.
+- In the event world, players can only use the event's commands (`/event`, `/event leave`, `/spawn`), so other plugins'
+  commands (like `/home`, `/tpa` or `/ec`) can't get them around the event. Other commands can be allowed with
+  `Settings.BlockCommands.AllowedCommands` in the `config.yml`. Staff (`event.command` or `event.commands.bypass`) can
+  use all commands.
 - `/event whitelist on` closes the event: only whitelisted players (`/event whitelist add <player>`) and staff can join
   it then. Players who are already in it stay.
 - In the configured commands, `%world%` is replaced with the event world (like `minecraft:event`). Use
@@ -125,6 +132,7 @@ mapManager.drop();
 | `event.spawn`         | Use /spawn                                                                             |
 | `event.join`          | Use /event to join the event (everyone by default)                                     |
 | `event.whitelist.bypass` | Join the event while it's whitelisted                                               |
+| `event.commands.bypass` | Use all commands in the event world, not only the event's                            |
 
 </details>
 

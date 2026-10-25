@@ -1,8 +1,10 @@
 package me.david.listener.canvas;
 
+import io.canvasmc.canvas.event.EntityPostTeleportAsyncEvent;
 import io.canvasmc.canvas.event.EntityTeleportAsyncEvent;
 import me.david.EventCore;
 import me.david.manager.EventWorldManager;
+import me.david.util.PlayerUtil;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -39,6 +41,17 @@ public class CanvasPlayerTeleportListener implements Listener {
     public void onEntityTeleported(EntityTeleportAsyncEvent event) {
         if (event.getEntity() instanceof Player player) {
             EventCore.getInstance().getEventWorldManager().onTeleport(player, event.getFrom(), event.getTo());
+        }
+    }
+
+    // Canvas replaces the teleport logic, so don't count on the world change event alone to put the player's own
+    // items away or give them back: update once more when they've arrived (updating twice does nothing).
+    @EventHandler
+    public void onEntityPostTeleport(EntityPostTeleportAsyncEvent event) {
+        if (event.getType() != EntityTeleportAsyncEvent.TeleportType.CROSS_WORLD) return;
+
+        if (event.getEntity() instanceof Player player) {
+            PlayerUtil.runFor(player, EventCore.getInstance().getEventWorldManager()::update);
         }
     }
 

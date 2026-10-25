@@ -15,3 +15,6 @@ permissions:
   event.whitelist.bypass:
     description: Join the event while it's whitelisted
     default: op
+  event.commands.bypass:
+    description: Use all commands in the event world, not only the event's
+    default: op
