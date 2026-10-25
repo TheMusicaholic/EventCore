@@ -28,7 +28,7 @@ public class KitCommand extends BukkitCommand {
 
         if (args.length == 1) {
             if (args[0].equalsIgnoreCase("*")) {
-                PlayerUtil.runForAll(plugin.getKitManager()::give);
+                PlayerUtil.runForEventPlayers(plugin.getKitManager()::give);
                 player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Everyone §7has been equipped!")));
                 return;
             }
@@ -36,6 +36,12 @@ public class KitCommand extends BukkitCommand {
             final Player target = Bukkit.getPlayer(args[0]);
             if (target == null) {
                 player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("This player is not online!")));
+                return;
+            }
+
+            // A kit replaces the inventory, which outside the event is the player's own.
+            if (!plugin.getEventWorldManager().isInEventWorld(target)) {
+                player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§cThis player is not in the event!")));
                 return;
             }
 
@@ -91,7 +97,7 @@ public class KitCommand extends BukkitCommand {
                 }
 
                 if (args[1].equalsIgnoreCase("*")) {
-                    PlayerUtil.runForAll(target -> plugin.getKitManager().give(target, kit, true));
+                    PlayerUtil.runForEventPlayers(target -> plugin.getKitManager().give(target, kit, true));
                     player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Everyone §7has been equipped with §a" + kit + "§7!")));
                     return;
                 }
@@ -99,6 +105,11 @@ public class KitCommand extends BukkitCommand {
                 final Player target = Bukkit.getPlayer(args[1]);
                 if (target == null) {
                     player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("This player is not online!")));
+                    return;
+                }
+
+                if (!plugin.getEventWorldManager().isInEventWorld(target)) {
+                    player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§cThis player is not in the event!")));
                     return;
                 }
 
@@ -127,7 +138,7 @@ public class KitCommand extends BukkitCommand {
 
         if (args.length == 2) {
             if (args[0].equalsIgnoreCase("give")) {
-                list.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
+                list.addAll(plugin.getEventWorldManager().getPlayers().stream().map(Player::getName).toList());
                 list.add("*");
             } else {
                 list.addAll(plugin.getKitManager().getKits().keySet());
@@ -135,7 +146,7 @@ public class KitCommand extends BukkitCommand {
         }
 
         if (args.length == 1) {
-            list.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
+            list.addAll(plugin.getEventWorldManager().getPlayers().stream().map(Player::getName).toList());
             list.add("*");
             list.add("give");
             list.add("enable");

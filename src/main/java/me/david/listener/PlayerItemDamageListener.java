@@ -10,6 +10,7 @@ public class PlayerItemDamageListener implements Listener {
     @EventHandler
     public void onPlayerItemDamage(PlayerItemDamageEvent event) {
         if (!EventCore.getInstance().getSettings().isUnbreakableArmor()) return;
+        if (!EventCore.getInstance().getEventWorldManager().isInEventWorld(event.getPlayer())) return;
 
         // Armor only loses durability through this event, so cancelling it keeps it from ever wearing down or breaking.
         if (event.getItem().getType().getEquipmentSlot().isArmor()) {

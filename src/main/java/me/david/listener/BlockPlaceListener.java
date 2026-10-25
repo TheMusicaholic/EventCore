@@ -10,6 +10,8 @@ public class BlockPlaceListener implements Listener {
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
+        if (!EventCore.getInstance().getEventWorldManager().isEventWorld(event.getBlock().getWorld())) return;
+
         final Player player = event.getPlayer();
 
         // Same outcome as checking the bypass permission first, but skips the permission lookup

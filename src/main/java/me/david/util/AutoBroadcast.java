@@ -2,7 +2,6 @@ package me.david.util;
 
 import me.david.EventCore;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -30,7 +29,7 @@ public class AutoBroadcast implements Runnable {
             CommandUtil.dispatch(settings.getAutoBroadcastCommand().replace("%message%", message));
         } else {
             final Component component = MessageUtil.translateColorCodes(message);
-            for (Player player : Bukkit.getOnlinePlayers()) {
+            for (Player player : EventCore.getInstance().getEventWorldManager().getPlayers()) {
                 player.sendMessage(Component.empty());
                 player.sendMessage(Component.empty());
                 player.sendMessage(component);

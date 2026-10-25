@@ -4,6 +4,7 @@ import lombok.experimental.UtilityClass;
 import me.david.EventCore;
 import me.david.util.folia.FoliaScheduler;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.jetbrains.annotations.NotNull;
 
 @UtilityClass
@@ -35,7 +36,16 @@ public class CommandUtil {
 
     // Commands in config.yml are written with a leading slash, which dispatchCommand doesn't accept.
     private String toCommandLine(@NotNull String command) {
-        return command.startsWith("/") ? command.substring(1) : command;
+        final String commandLine = command.startsWith("/") ? command.substring(1) : command;
+        return commandLine.contains("%world%") ? commandLine.replace("%world%", getEventDimension()) : commandLine;
+    }
+
+    // What %world% stands for: the event world's dimension (like minecraft:event), which is what limits a vanilla
+    // command to it: /execute in %world% run ...
+    private String getEventDimension() {
+        final EventCore plugin = EventCore.getInstance();
+        final World world = plugin.getEventWorldManager().getWorld();
+        return world != null ? world.getKey().asString() : plugin.getSettings().getEventWorld();
     }
 
 }

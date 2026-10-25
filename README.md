@@ -17,6 +17,22 @@
 2. Replace the old jar with the new one
 3. Delete the old `config.yml` and restart your server
 
+## Event world
+The event takes place in one world, `Settings.EventWorld` in the `config.yml`, so it can run on the same server as
+other worlds. EventCore only works in that world: the rest of the server isn't touched.
+
+- Players join the event with `/event`, which teleports them to the spawn set with `/event setSpawn`, and leave it with
+  `/event leave`, which sends them back to where they were.
+- Their own items, ender chest, game mode, health, hunger, experience and effects are put away when they enter the event
+  world, in any way, and given back when they leave it, in any way. Nothing can be brought into the event or taken out
+  of it. The saved state is kept with the player's data, so it survives restarts and crashes.
+- Players who log out in the event world are back in the event when they log in again.
+- `/event whitelist on` closes the event: only whitelisted players (`/event whitelist add <player>`) and staff can join
+  it then. Players who are already in it stay.
+- In the configured commands, `%world%` is replaced with the event world (like `minecraft:event`). Use
+  `/execute in %world% run ...` to limit a command to the event world: a plain `/kill @e` kills the entities of every
+  world on the server.
+
 ---
 
 ### Maven
@@ -69,14 +85,21 @@ mapManager.drop();
 
 | Command                        | Action                                                  |
 |--------------------------------|:--------------------------------------------------------|
+| `/event`                       | Join the event (teleports to the spawn)                 |
+| `/event leave`                 | Leave the event (teleports back, own items back)        |
+| `/event help`                  | Show all commands                                       |
 | `/event start`                 | Start the event                                         |
 | `/event stop <winner>`         | Stop the event                                          |
 | `/event drop`                  | Drop with the commands defined in the config.yml        |
 | `/event autoBorder <on / off>` | Toggle AutoBorder                                       |
-| `/event setSpawn`              | Set the spawn location                                  |
-| `/event kickspec`              | Kick all spectators                                     |
-| `/event kickall`               | Kick all players (exclude players with `event.command`) |
-| `/event clearall`              | Clear all player inventories                            |
+| `/event setSpawn`              | Set the spawn location (in the event world)             |
+| `/event whitelist <on / off>`  | Toggle the event whitelist                              |
+| `/event whitelist list`        | Show the whitelisted players                            |
+| `/event whitelist add <name>`  | Add a player to the event whitelist                     |
+| `/event whitelist remove <name>` | Remove a player from the event whitelist              |
+| `/event kickspec`              | Send all spectators out of the event                    |
+| `/event kickall`               | Send all players out of the event (exclude `event.spec`) |
+| `/event clearall`              | Clear the inventories of all players in the event       |
 | `/kit <player>`                | Give a player the saved kit                             |
 | `/kit *`                       | Give all players the saved kit                          |
 | `/kit give <player/*> <name>`  | Give a player (or everyone with `*`) a specific kit     |
@@ -85,8 +108,8 @@ mapManager.drop();
 | `/kit delete <name>`           | Delete a kit                                            |
 | `/revive <player>`             | Revive a player                                         |
 | `/revive *`                    | Revive all players who are not in gamemode 0            |
-| `/announce <message>`          | Announce a message                                      |
-| `/spawn`                       | Teleport to the spawn                                   |
+| `/announce <message>`          | Announce a message to the players in the event          |
+| `/spawn`                       | Teleport to the spawn (in the event world, elsewhere another plugin's `/spawn` is used) |
 
 </details>
 
@@ -98,8 +121,10 @@ mapManager.drop();
 | Permissions           |                                                                                        |
 |-----------------------|:---------------------------------------------------------------------------------------|
 | `event.bypass`        | Disables protect while not started (break blocks, place blocks, interact, hit players) |
-| `event.command`       | Use /event                                                                             |
+| `event.command`       | Use the /event admin commands (and join the event while it's whitelisted)              |
 | `event.spawn`         | Use /spawn                                                                             |
+| `event.join`          | Use /event to join the event (everyone by default)                                     |
+| `event.whitelist.bypass` | Join the event while it's whitelisted                                               |
 
 </details>
 
@@ -110,8 +135,8 @@ mapManager.drop();
 
 | Placeholder          | Description                                       | Example |
 |:---------------------|:--------------------------------------------------|:--------|
-| `%eventcore_total%`  | Total players online                              | 12      |
-| `%eventcore_alive%`  | Total players alive (players in gamemode 0)       | 4       |
+| `%eventcore_total%`  | Total players in the event world                  | 12      |
+| `%eventcore_alive%`  | Players alive in the event (players in gamemode 0) | 4      |
 | `%eventcore_kills%`  | Kills of the player                               | 6       |
 | `%eventcore_deaths%` | Deaths of the player                              | 3       |
 | `%eventcore_kd%`     | K/D of the player                                 | 2.00    |

@@ -2,6 +2,7 @@ package me.david.command.impl;
 
 import me.david.EventCore;
 import me.david.command.BukkitCommand;
+import me.david.manager.EventWorldManager;
 import me.david.util.BorderUtil;
 import me.david.util.MessageUtil;
 import me.david.util.PlayerUtil;
@@ -22,7 +23,8 @@ public class EventCommand extends BukkitCommand {
     private final EventCore plugin;
 
     public EventCommand(EventCore plugin) {
-        super("event", "event.command", "e");
+        // Everyone may join and leave the event, the other subcommands check for event.command themselves.
+        super("event", null, "e");
         this.plugin = plugin;
     }
 
@@ -32,23 +34,52 @@ public class EventCommand extends BukkitCommand {
 
     @Override
     public void onCommand(CommandSender sender, String label, String[] args) {
-        if (!(sender instanceof final Player player)) return;
+        final EventWorldManager eventWorld = plugin.getEventWorldManager();
 
         if (args.length == 0) {
-            player.sendMessage(" ");
-            player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§7Running §aEventCore §7v" + plugin.getPluginMeta().getVersion() + " §7on §a" + getSoftware())));
-            player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§7Download at §ahttps://github.com/VertrauterDavid")));
-            player.sendMessage(" ");
+            if (!(sender instanceof final Player player)) {
+                sendUsage(sender);
+                return;
+            }
+
+            if (!player.hasPermission("event.join")) {
+                player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§cYou don't have permission to join the event!")));
+                return;
+            }
+
+            eventWorld.join(player);
+            return;
+        }
+
+        if (args.length == 1 && args[0].equalsIgnoreCase("leave")) {
+            if (sender instanceof final Player player) {
+                eventWorld.leave(player);
+            }
+            return;
+        }
+
+        if (!sender.hasPermission("event.command")) {
+            sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event")));
+            sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event leave")));
+            return;
         }
 
         if (args.length == 1) {
+            if (args[0].equalsIgnoreCase("help")) {
+                sender.sendMessage(" ");
+                sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§7Running §aEventCore §7v" + plugin.getPluginMeta().getVersion() + " §7on §a" + getSoftware())));
+                sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§7Download at §ahttps://github.com/VertrauterDavid")));
+                sendUsage(sender);
+                return;
+            }
+
             if (args[0].equalsIgnoreCase("start")) {
                 plugin.getGameManager().start();
                 return;
             }
 
             if (args[0].equalsIgnoreCase("stop")) {
-                player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event stop <winner>")));
+                sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event stop <winner>")));
                 return;
             }
 
@@ -67,11 +98,18 @@ public class EventCommand extends BukkitCommand {
                 plugin.reloadConfig();
                 double reloadMS = System.currentTimeMillis() - currentMS;
 
-                player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§aYou successfully reloaded the config within %ms%ms!").replaceText(b -> b.matchLiteral("%ms%").replacement(Component.text(String.valueOf(reloadMS))))));
+                sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§aYou successfully reloaded the config within %ms%ms!").replaceText(b -> b.matchLiteral("%ms%").replacement(Component.text(String.valueOf(reloadMS))))));
                 return;
             }
 
             if (args[0].equalsIgnoreCase("setSpawn")) {
+                if (!(sender instanceof final Player player)) return;
+
+                if (!eventWorld.isInEventWorld(player)) {
+                    player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§cThe spawn has to be in the event world §7" + plugin.getSettings().getEventWorld() + "§c! Change the world with §7Settings.EventWorld §cin the config.yml")));
+                    return;
+                }
+
                 plugin.getMapManager().saveSpawnLocation(player);
                 player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§aSpawn location saved!")));
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 5, 5);
@@ -79,33 +117,34 @@ public class EventCommand extends BukkitCommand {
                 return;
             }
 
+            // Kicking would throw them off the whole server, so they're sent out of the event instead.
             if (args[0].equalsIgnoreCase("kickspec")) {
-                for (final Player target : Bukkit.getOnlinePlayers()) {
+                for (final Player target : eventWorld.getPlayers()) {
                     if (!(target.hasPermission("event.spec")) && target.getGameMode() == GameMode.SPECTATOR) {
-                        PlayerUtil.runFor(target, Player::kick);
+                        PlayerUtil.runFor(target, eventWorld::leave);
                     }
                 }
 
-                player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("All spectators has been kicked!")));
+                sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("All spectators have been sent out of the event!")));
                 return;
             }
 
             if (args[0].equalsIgnoreCase("kickall")) {
-                for (final Player target : Bukkit.getOnlinePlayers()) {
+                for (final Player target : eventWorld.getPlayers()) {
                     if (!(target.hasPermission("event.spec"))) {
-                        PlayerUtil.runFor(target, Player::kick);
+                        PlayerUtil.runFor(target, eventWorld::leave);
                     }
                 }
-                player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("All players has been kicked!")));
+                sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("All players have been sent out of the event!")));
                 return;
             }
 
             if (args[0].equalsIgnoreCase("clearall")) {
-                PlayerUtil.runForAll(target -> {
+                PlayerUtil.runForEventPlayers(target -> {
                     target.getInventory().setArmorContents(null);
                     target.getInventory().clear();
                 });
-                player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("All players has been cleared!")));
+                sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("All players has been cleared!")));
                 return;
             }
         }
@@ -115,7 +154,7 @@ public class EventCommand extends BukkitCommand {
                 if (args[1].equalsIgnoreCase("on")) {
                     BorderUtil.setAutoBorder(true);
 
-                    player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("AutoBorder has been §aactivated!")));
+                    sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("AutoBorder has been §aactivated!")));
                     return;
                 }
 
@@ -123,9 +162,57 @@ public class EventCommand extends BukkitCommand {
                     BorderUtil.setAutoBorder(false);
                     BorderUtil.lastOptimal = BorderUtil.borderDefault;
 
-                    player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("AutoBorder has been §cdeactivated!")));
+                    sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("AutoBorder has been §cdeactivated!")));
                     return;
                 }
+            }
+
+            if (args[0].equalsIgnoreCase("whitelist")) {
+                if (args[1].equalsIgnoreCase("on")) {
+                    eventWorld.setWhitelistEnabled(true);
+
+                    sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("The event whitelist has been §aactivated§7! Only whitelisted players can join the event now.")));
+                    return;
+                }
+
+                if (args[1].equalsIgnoreCase("off")) {
+                    eventWorld.setWhitelistEnabled(false);
+
+                    sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("The event whitelist has been §cdeactivated§7! Everyone can join the event now.")));
+                    return;
+                }
+
+                if (args[1].equalsIgnoreCase("list")) {
+                    final String state = eventWorld.isWhitelistEnabled() ? "§aon" : "§coff";
+                    final String players = eventWorld.getWhitelist().isEmpty() ? "§7-" : "§a" + String.join("§7, §a", eventWorld.getWhitelist());
+
+                    sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("The event whitelist is " + state + "§7. Whitelisted players (" + eventWorld.getWhitelist().size() + "): " + players)));
+                    return;
+                }
+            }
+        }
+
+        if (args.length == 3 && args[0].equalsIgnoreCase("whitelist")) {
+            // The exact name if they're online, as typed otherwise.
+            final Player target = Bukkit.getPlayerExact(args[2]);
+            final String name = target != null ? target.getName() : args[2];
+
+            if (args[1].equalsIgnoreCase("add")) {
+                if (eventWorld.addToWhitelist(name)) {
+                    sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§a" + name + " §7has been added to the event whitelist!")));
+                } else {
+                    sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§c" + name + " is already on the event whitelist!")));
+                }
+                return;
+            }
+
+            if (args[1].equalsIgnoreCase("remove")) {
+                if (eventWorld.removeFromWhitelist(name)) {
+                    sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§a" + name + " §7has been removed from the event whitelist!")));
+                } else {
+                    sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§c" + name + " isn't on the event whitelist!")));
+                }
+                return;
             }
         }
 
@@ -145,39 +232,63 @@ public class EventCommand extends BukkitCommand {
             }
         }
 
-        player.sendMessage(" ");
-        player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event start")));
-        player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event stop <winner>")));
-        player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event drop")));
-        player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event reset")));
-        player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event autoBorder <on / off>")));
-        player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event setSpawn")));
-        player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event reload")));
-        player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event kickspec")));
-        player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event kickall")));
-        player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: &c/event clearall")));
-        player.sendMessage(" ");
+        sendUsage(sender);
+    }
+
+    private void sendUsage(CommandSender sender) {
+        sender.sendMessage(" ");
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event leave")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event start")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event stop <winner>")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event drop")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event reset")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event autoBorder <on / off>")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event whitelist <on / off / list>")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event whitelist <add / remove> <player>")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event setSpawn")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event reload")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event kickspec")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: §c/event kickall")));
+        sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("Usage: &c/event clearall")));
+        sender.sendMessage(" ");
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, String label, String[] args) {
         if (!(sender instanceof final Player player)) return new ArrayList<>();
-        if (!(player.hasPermission("event.command"))) return new ArrayList<>();
+        if (!(player.hasPermission("event.command"))) {
+            return args.length == 1 && "leave".startsWith(args[0].toLowerCase()) ? List.of("leave") : new ArrayList<>();
+        }
 
         List<String> list = new ArrayList<>();
 
+        if (args.length == 3 && args[0].equalsIgnoreCase("whitelist")) {
+            if (args[1].equalsIgnoreCase("add")) {
+                list.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
+            }
+
+            if (args[1].equalsIgnoreCase("remove")) {
+                list.addAll(plugin.getEventWorldManager().getWhitelist());
+            }
+        }
+
         if (args.length == 2) {
             if (args[0].equalsIgnoreCase("stop")) {
-                list.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
+                list.addAll(plugin.getEventWorldManager().getPlayers().stream().map(Player::getName).toList());
             }
 
             if (args[0].equalsIgnoreCase("autoBorder")) {
                 list.addAll(Arrays.asList("on", "off"));
             }
+
+            if (args[0].equalsIgnoreCase("whitelist")) {
+                list.addAll(Arrays.asList("on", "off", "list", "add", "remove"));
+            }
         }
 
         if (args.length == 1) {
-            list.addAll(Arrays.asList("start", "stop", "drop", "reset", "autoBorder", "kickspec", "kickall", "clearall", "setSpawn", "reload"));
+            list.addAll(Arrays.asList("leave", "help", "start", "stop", "drop", "reset", "autoBorder", "whitelist", "kickspec", "kickall", "clearall", "setSpawn", "reload"));
         }
 
         return list.stream().filter(content -> content.toLowerCase().startsWith(args[args.length - 1].toLowerCase())).sorted().toList();

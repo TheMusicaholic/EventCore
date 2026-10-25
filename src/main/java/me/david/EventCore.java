@@ -9,6 +9,7 @@ import me.david.command.impl.*;
 import me.david.listener.*;
 import me.david.listener.canvas.CanvasPlayerRespawnListener;
 import me.david.listener.canvas.CanvasPlayerTeleportListener;
+import me.david.manager.EventWorldManager;
 import me.david.manager.GameManager;
 import me.david.manager.KitManager;
 import me.david.manager.MapManager;
@@ -30,6 +31,7 @@ public class EventCore extends JavaPlugin {
     private static EventCore instance;
     private volatile Settings settings;
     private UpdateChecker updateChecker;
+    private EventWorldManager eventWorldManager;
     private MapManager mapManager;
     private GameManager gameManager;
     private KitManager kitManager;
@@ -49,6 +51,7 @@ public class EventCore extends JavaPlugin {
         updateChecker = new UpdateChecker(instance, "DavidArchive", "EventCore");
         updateChecker.check();
 
+        eventWorldManager = new EventWorldManager();
         mapManager = new MapManager();
         gameManager = new GameManager();
         kitManager = new KitManager();
@@ -67,6 +70,7 @@ public class EventCore extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new EntityDamageByEntityListener(), instance);
         Bukkit.getPluginManager().registerEvents(new EntityDamageListener(), instance);
         Bukkit.getPluginManager().registerEvents(new EntityExplodeListener(), instance);
+        Bukkit.getPluginManager().registerEvents(new PlayerChangedWorldListener(), instance);
         Bukkit.getPluginManager().registerEvents(new PlayerDeathListener(), instance);
         Bukkit.getPluginManager().registerEvents(new PlayerDropItemListener(), instance);
         Bukkit.getPluginManager().registerEvents(new PlayerInteractListener(), instance);
@@ -94,7 +98,11 @@ public class EventCore extends JavaPlugin {
         final AutoBroadcast autoBroadcast = new AutoBroadcast();
         FoliaScheduler.getAsyncScheduler().runAtFixedRate(instance, o -> autoBroadcast.run(), 20, 20 * getConfig().getLong("AutoBroadcast.Interval", 60));
         FoliaScheduler.getGlobalRegionScheduler().runDelayed(instance, o -> {
-            World world = mapManager.getSpawnLocation().getWorld();
+            final World world = eventWorldManager.getWorld();
+            if (world == null) {
+                LOGGER.warn("The event world '{}' isn't loaded. Set Settings.EventWorld in the config.yml to the world the event takes place in.", settings.getEventWorld());
+                return;
+            }
             world.setGameRule(GameRules.SHOW_ADVANCEMENT_MESSAGES, false);
             world.setDifficulty(Difficulty.PEACEFUL);
             world.getWorldBorder().setSize(BorderUtil.borderDefault);
@@ -109,13 +117,13 @@ public class EventCore extends JavaPlugin {
                 // Without placeholders the text is the same for everyone, so translate it once.
                 if (!placeholderApi || raw.indexOf('%') < 0) {
                     final Component actionbar = MessageUtil.translateColorCodes(raw);
-                    for (Player player : Bukkit.getOnlinePlayers()) {
+                    for (Player player : eventWorldManager.getPlayers()) {
                         player.sendActionBar(actionbar);
                     }
                     return;
                 }
 
-                for (Player player : Bukkit.getOnlinePlayers()) {
+                for (Player player : eventWorldManager.getPlayers()) {
                     String parsed = PlaceholderAPI.setPlaceholders(player, raw);
 
                     player.sendActionBar(MessageUtil.translateColorCodes(parsed));
@@ -135,6 +143,9 @@ public class EventCore extends JavaPlugin {
         // Hot paths read these snapshots instead of walking the config, so refresh them on every (re)load.
         settings = new Settings(getConfig());
         BorderUtil.loadSettings(getConfig());
+        if (eventWorldManager != null) {
+            eventWorldManager.loadSettings(getConfig());
+        }
         MessageUtil.clearCache();
     }
 

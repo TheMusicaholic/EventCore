@@ -15,6 +15,8 @@ public class EntityDamageListener implements Listener {
 
     @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
+        if (!EventCore.getInstance().getEventWorldManager().isEventWorld(event.getEntity().getWorld())) return;
+
         final Settings settings = EventCore.getInstance().getSettings();
 
         if (settings.isDisableFallDamage()) {

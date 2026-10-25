@@ -148,7 +148,7 @@ public class KitManager implements me.david.api.manager.KitManager {
         EventCore.getInstance().getConfig().set("Kits.EnabledKit", kit);
         EventCore.getInstance().saveConfig();
 
-        PlayerUtil.runForAll(this::give);
+        PlayerUtil.runForEventPlayers(this::give);
     }
 
     public void delete(@NotNull final String kit) {

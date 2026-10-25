@@ -1,6 +1,7 @@
 package me.david.listener;
 
 import com.destroystokyo.paper.event.entity.PreCreatureSpawnEvent;
+import me.david.EventCore;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -23,7 +24,7 @@ public class CreatureSpawnListener implements Listener {
     // (and then discarding) an entity. Aborting also stops the spawner from retrying the rest of the pack.
     @EventHandler(ignoreCancelled = true)
     public void onPreCreatureSpawn(PreCreatureSpawnEvent event) {
-        if (event.getReason() == CreatureSpawnEvent.SpawnReason.NATURAL) {
+        if (event.getReason() == CreatureSpawnEvent.SpawnReason.NATURAL && EventCore.getInstance().getEventWorldManager().isEventWorld(event.getSpawnLocation().getWorld())) {
             event.setCancelled(true);
             event.setShouldAbortSpawn(true);
         }
@@ -31,7 +32,7 @@ public class CreatureSpawnListener implements Listener {
 
     @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
-        if (BLOCKED_REASONS.contains(event.getSpawnReason())) {
+        if (BLOCKED_REASONS.contains(event.getSpawnReason()) && EventCore.getInstance().getEventWorldManager().isEventWorld(event.getLocation().getWorld())) {
             event.setCancelled(true);
         }
     }
