@@ -48,11 +48,12 @@ public class CanvasPlayerTeleportListener implements Listener {
     // items away or give them back: update once more when they've arrived (updating twice does nothing).
     @EventHandler
     public void onEntityPostTeleport(EntityPostTeleportAsyncEvent event) {
-        if (event.getType() != EntityTeleportAsyncEvent.TeleportType.CROSS_WORLD) return;
+        if (!(event.getEntity() instanceof Player player)) return;
 
-        if (event.getEntity() instanceof Player player) {
-            PlayerUtil.runFor(player, EventCore.getInstance().getEventWorldManager()::update);
-        }
+        // Only teleports into another world. Compares the worlds: Canvas 26.3 removed the event's teleport type.
+        if (event.getFrom().getWorld() == event.getTo().getWorld()) return;
+
+        PlayerUtil.runFor(player, EventCore.getInstance().getEventWorldManager()::update);
     }
 
 }

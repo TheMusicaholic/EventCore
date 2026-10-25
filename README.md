@@ -12,8 +12,9 @@
 2. Put the jar in your plugins folder
 3. Restart your server (not reload)
 
-EventCore runs on [Paper](https://papermc.io/) and [Canvas](https://canvasmc.io/). It needs WorldEdit (used by
-`/event drop`), on Canvas a version with Folia support.
+EventCore runs on [Paper](https://papermc.io/) and [Canvas](https://canvasmc.io/), from Minecraft 1.21.11 to 26.3: the
+same jar works on all of them (servers for 26.1 and newer need Java 25). It needs WorldEdit (used by `/event drop`), on
+Canvas a version with Folia support.
 
 ## Update
 1. Download the new jar from [here](https://github.com/DavidArchive/EventCore/releases/latest)
