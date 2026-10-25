@@ -42,7 +42,19 @@ public class MapManager implements me.david.api.manager.MapManager {
         EventCore.getInstance().saveConfig();
     }
 
+    /**
+     * Whether the map can be dropped: it's cleared with WorldEdit (or FastAsyncWorldEdit), which is optional.
+     */
+    public boolean canDrop() {
+        return Bukkit.getPluginManager().isPluginEnabled("WorldEdit") || Bukkit.getPluginManager().isPluginEnabled("FastAsyncWorldEdit");
+    }
+
     public void drop() {
+        if (!canDrop()) {
+            EventCore.LOGGER.warn("The map can't be dropped without WorldEdit (or FastAsyncWorldEdit).");
+            return;
+        }
+
         final Settings settings = EventCore.getInstance().getSettings();
         final Location spawnLocation = this.spawnLocation;
         long borderExtra = settings.getDropBorderExtra();

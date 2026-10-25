@@ -86,6 +86,11 @@ public class EventCommand extends BukkitCommand {
             }
 
             if (args[0].equalsIgnoreCase("drop")) {
+                if (!plugin.getMapManager().canDrop()) {
+                    sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§cThe map can't be dropped without WorldEdit (or FastAsyncWorldEdit)!")));
+                    return;
+                }
+
                 plugin.getMapManager().drop();
                 return;
             }

@@ -6,8 +6,8 @@ author: VertrauterDavid, JavaMio
 load: POSTWORLD
 website: https://github.com/DavidArchive/EventCore
 canvas-supported: true
-softdepend: [PlaceholderAPI]
-depend: [WorldEdit]
+# WorldEdit is only needed for /event drop.
+softdepend: [PlaceholderAPI, WorldEdit]
 permissions:
   event.join:
     description: Join the event with /event
