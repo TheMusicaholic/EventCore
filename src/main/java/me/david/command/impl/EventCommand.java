@@ -100,6 +100,9 @@ public class EventCommand extends BukkitCommand {
                 plugin.reloadConfig();
                 double reloadMS = System.currentTimeMillis() - currentMS;
 
+                // The commands players in the event can use may have changed.
+                PlayerUtil.runForEventPlayers(Player::updateCommands);
+
                 sender.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§aYou successfully reloaded the config within %ms%ms!").replaceText(b -> b.matchLiteral("%ms%").replacement(Component.text(String.valueOf(reloadMS))))));
                 return;
             }

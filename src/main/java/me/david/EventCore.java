@@ -72,6 +72,7 @@ public class EventCore extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new EntityDamageListener(), instance);
         Bukkit.getPluginManager().registerEvents(new EntityExplodeListener(), instance);
         Bukkit.getPluginManager().registerEvents(new PlayerChangedWorldListener(), instance);
+        Bukkit.getPluginManager().registerEvents(new PlayerCommandListener(), instance);
         Bukkit.getPluginManager().registerEvents(new PlayerDeathListener(), instance);
         Bukkit.getPluginManager().registerEvents(new PlayerDropItemListener(), instance);
         Bukkit.getPluginManager().registerEvents(new PlayerInteractListener(), instance);

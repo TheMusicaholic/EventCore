@@ -5,8 +5,11 @@ import lombok.Getter;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Immutable snapshot of the config values read at runtime (event listeners, repeating tasks and game flow).
@@ -22,6 +25,8 @@ public final class Settings {
     private final boolean disableFallDamage;
     private final boolean disableItemExplosions;
     private final boolean unbreakableArmor;
+    private final boolean blockCommandsEnabled;
+    private final Set<String> allowedCommands;
     private final boolean allowItemDropBeforeStart;
     private final boolean disableEnderPearlsOutsideBorder;
     private final boolean borderBoostEnabled;
@@ -66,6 +71,8 @@ public final class Settings {
         disableFallDamage = config.getBoolean("Settings.DisableFallDamage", true);
         disableItemExplosions = config.getBoolean("Settings.DisableItemExplosions", true);
         unbreakableArmor = config.getBoolean("Settings.UnbreakableArmor", true);
+        blockCommandsEnabled = config.getBoolean("Settings.BlockCommands.Enabled", true);
+        allowedCommands = readAllowedCommands(config);
         allowItemDropBeforeStart = config.getBoolean("Settings.AllowItemDropBeforeStart");
         disableEnderPearlsOutsideBorder = config.getBoolean("Settings.WorldBorder.DisableEnderPeals");
         borderBoostEnabled = config.getBoolean("Settings.WorldBorder.Boost.Enabled");
@@ -113,6 +120,16 @@ public final class Settings {
         if (!eventWorld.isEmpty()) return eventWorld;
 
         return config.getString("Settings.SpawnLocation", "world/0/200/0").split("/")[0];
+    }
+
+    // In the form they're compared in: the label as typed, in lower case and without the slash.
+    private static @NotNull Set<String> readAllowedCommands(@NotNull final FileConfiguration config) {
+        final Set<String> commands = new HashSet<>();
+        for (String command : config.getStringList("Settings.BlockCommands.AllowedCommands")) {
+            final String label = command.trim().toLowerCase(Locale.ROOT);
+            commands.add(label.startsWith("/") ? label.substring(1) : label);
+        }
+        return Set.copyOf(commands);
     }
 
     /**

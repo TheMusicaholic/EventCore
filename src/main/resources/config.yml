@@ -18,6 +18,7 @@
 # Players join the event with '/event' and leave it with '/event leave' (or by going to another world in any other way).
 # Their own items, ender chest, game mode, health, hunger, experience and effects are put away when they enter the event
 # world and given back when they leave it: nothing can be brought into the event or taken out of it.
+# While they're in the event world, they can only use the event's commands (see Settings.BlockCommands).
 #
 # In all commands below, %world% is replaced with the event world (like 'minecraft:event'). Use '/execute in %world% run ...'
 # to limit a command to the event world: a plain '/kill @e' would kill the entities of every world on the server!
@@ -33,6 +34,9 @@ Settings:
   DisableFallDamage: true # Disable fall damage
   DisableItemExplosions: true # Disable item explosions for End Crystal
   UnbreakableArmor: true # Armor never loses durability or breaks
+  BlockCommands: # Players in the event world can only use the event's commands (/event, /event leave, /spawn). Staff (event.command or event.commands.bypass) can use all
+    Enabled: true
+    AllowedCommands: [] # Other commands they can still use, without the slash (like 'msg'). List every alias (like 'tell') and 'plugin:command' on its own
   Updates:
     NotifyOnJoin: true
     LogInConsole: false
@@ -91,6 +95,7 @@ Messages:
     Enabled: true
     Message1: "&8 | &c☠ &8» &c%player% &7was killed by &c%killer%&7!"
     Message2: "&8 | &c☠ &8» &c%player% &7died!" # Message when the player has simply died and there is no killer!
+  BlockedCommand: "&cYou can't use this command in the event! Use &7/event leave &cto leave it." # See Settings.BlockCommands
   StartTimer:
     Timer: 5 # Timer in seconds
     Message: "The game starts in &c%timer% seconds!"

@@ -164,6 +164,9 @@ public class EventWorldManager {
             PlayerSnapshot.restore(player);
             exit(player);
         }
+
+        // In the event world they only get the event's commands (see PlayerCommandListener), outside all of theirs again.
+        player.updateCommands();
     }
 
     /**
