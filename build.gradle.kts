@@ -11,7 +11,7 @@ description = "Event Server System with tons of useful commands and features"
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 
@@ -25,7 +25,7 @@ repositories {
 
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
     maven("https://repo.extendedclip.com/content/repositories/placeholderapi/") // PlaceholderAPI
-    maven("https://maven.canvasmc.io/snapshots") // CanvasMC
+    maven("https://maven.canvasmc.io/releases") // CanvasMC
 }
 
 dependencies {
@@ -82,8 +82,9 @@ tasks {
     // 1.17           = Java 16
     // 1.18 - 1.20.4  = Java 17
     // 1-20.5+        = Java 21
-    val version = "1.21.11"
-    val javaVersion = JavaLanguageVersion.of(21)
+    // 26.1+          = Java 25
+    val version = "26.3"
+    val javaVersion = JavaLanguageVersion.of(25)
 
     val jvmArgsExternal = listOf(
         "-Dcom.mojang.eula.agree=true"

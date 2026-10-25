@@ -1,5 +1,5 @@
 [versions]
-canvas-api = "1.21.11-R0.1-SNAPSHOT"
+canvas-api = "26.3.build.991-stable"
 lombok = "1.18.48"
 placeholderapi = "2.12.3"
 shadow = "9.6.1"

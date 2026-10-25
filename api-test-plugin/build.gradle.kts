@@ -8,7 +8,7 @@ description = "EventCore API test plugin"
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 
@@ -20,7 +20,7 @@ repositories {
     mavenCentral()
 
     maven("https://repo.papermc.io/repository/maven-public/")
-    maven("https://maven.canvasmc.io/snapshots")
+    maven("https://maven.canvasmc.io/releases")
 }
 
 dependencies {

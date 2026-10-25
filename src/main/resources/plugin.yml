@@ -1,6 +1,6 @@
 name: EventCore
 version: ${version}
-api-version: 1.21
+api-version: '26.3'
 main: me.david.EventCore
 author: VertrauterDavid, JavaMio
 load: POSTWORLD

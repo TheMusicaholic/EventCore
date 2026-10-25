@@ -9,7 +9,7 @@ description = "EventCore API"
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 
     withSourcesJar()
@@ -24,7 +24,7 @@ repositories {
     mavenCentral()
 
     maven("https://repo.papermc.io/repository/maven-public/")
-    maven("https://maven.canvasmc.io/snapshots")
+    maven("https://maven.canvasmc.io/releases")
 }
 
 dependencies {
