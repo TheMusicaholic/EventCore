@@ -2,6 +2,7 @@ package me.david.util;
 
 import lombok.experimental.UtilityClass;
 import me.david.EventCore;
+import me.david.manager.EventWorldManager;
 import me.david.util.folia.FoliaScheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -18,28 +19,46 @@ import java.util.function.Consumer;
 @UtilityClass
 public class PlayerUtil {
 
-    // Scoreboards and tab lists can request %eventcore_alive% for every player on every refresh, and counting all
-    // players each time makes a refresh O(players²). A count is reused for one tick instead.
-    private final long ALIVE_CACHE_NANOS = TimeUnit.MILLISECONDS.toNanos(50);
+    // Scoreboards and tab lists can request %eventcore_alive% and %eventcore_total% for every player on every refresh,
+    // and counting all players each time makes a refresh O(players²). The counts are reused for one tick instead.
+    private final long COUNT_CACHE_NANOS = TimeUnit.MILLISECONDS.toNanos(50);
     private volatile int aliveCount;
-    private volatile long aliveCountExpiry = System.nanoTime();
+    private volatile int totalCount;
+    private volatile long countExpiry = System.nanoTime();
 
+    /**
+     * The players in the event world who are still in the game (in survival mode).
+     */
     public int getAlive() {
-        final long now = System.nanoTime();
-        if (now - aliveCountExpiry < 0) return aliveCount;
-
-        int alive = 0;
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (player.getGameMode() == GameMode.SURVIVAL) alive++;
-        }
-        // Written before the expiry, so a caller that sees the new expiry also sees this count.
-        aliveCount = alive;
-        aliveCountExpiry = now + ALIVE_CACHE_NANOS;
-        return alive;
+        refreshCounts();
+        return aliveCount;
     }
 
+    /**
+     * The players in the event world.
+     */
     public int getTotal() {
-        return Bukkit.getOnlinePlayers().size();
+        refreshCounts();
+        return totalCount;
+    }
+
+    private void refreshCounts() {
+        final long now = System.nanoTime();
+        if (now - countExpiry < 0) return;
+
+        final EventWorldManager eventWorld = EventCore.getInstance().getEventWorldManager();
+        int alive = 0;
+        int total = 0;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!eventWorld.isInEventWorld(player)) continue;
+
+            total++;
+            if (player.getGameMode() == GameMode.SURVIVAL) alive++;
+        }
+        // Written before the expiry, so a caller that sees the new expiry also sees these counts.
+        aliveCount = alive;
+        totalCount = total;
+        countExpiry = now + COUNT_CACHE_NANOS;
     }
 
     /**
@@ -83,10 +102,10 @@ public class PlayerUtil {
     }
 
     /**
-     * {@link #runFor(Player, Consumer)} for every online player.
+     * {@link #runFor(Player, Consumer)} for every player in the event world.
      */
-    public void runForAll(@NotNull Consumer<Player> action) {
-        for (Player player : Bukkit.getOnlinePlayers()) {
+    public void runForEventPlayers(@NotNull Consumer<Player> action) {
+        for (Player player : EventCore.getInstance().getEventWorldManager().getPlayers()) {
             runFor(player, action);
         }
     }

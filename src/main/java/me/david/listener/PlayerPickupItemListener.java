@@ -15,6 +15,7 @@ public class PlayerPickupItemListener implements Listener {
 
         if (!(entity instanceof Player player)) return;
         if (EventCore.getInstance().getSettings().isAllowItemDropBeforeStart()) return;
+        if (!EventCore.getInstance().getEventWorldManager().isInEventWorld(player)) return;
 
         // Same outcome as checking the bypass permission first, but skips the permission lookup while the game is running.
         event.setCancelled(!EventCore.getInstance().getGameManager().isRunning() && !player.hasPermission("event.bypass"));

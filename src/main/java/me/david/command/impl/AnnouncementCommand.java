@@ -5,7 +5,6 @@ import me.david.command.BukkitCommand;
 import me.david.util.MessageUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
-import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -44,7 +43,7 @@ public class AnnouncementCommand extends BukkitCommand {
                 title = Title.title(titleComponent, subTitleComponent);
             }
 
-            for (Player player : Bukkit.getOnlinePlayers()) {
+            for (Player player : plugin.getEventWorldManager().getPlayers()) {
                 player.sendMessage(formatted);
 
                 if (title != null) {

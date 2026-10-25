@@ -17,6 +17,7 @@ import java.util.Objects;
 @Getter
 public final class Settings {
 
+    private final String eventWorld;
     private final long maxBuildHeight;
     private final boolean disableFallDamage;
     private final boolean disableItemExplosions;
@@ -60,6 +61,7 @@ public final class Settings {
     private final String autoBroadcastCommand;
 
     public Settings(@NotNull final FileConfiguration config) {
+        eventWorld = readEventWorld(config);
         maxBuildHeight = config.getLong("Settings.MaxBuildHeight", 0L);
         disableFallDamage = config.getBoolean("Settings.DisableFallDamage", true);
         disableItemExplosions = config.getBoolean("Settings.DisableItemExplosions", true);
@@ -103,6 +105,14 @@ public final class Settings {
         autoBroadcastMessages = List.copyOf(config.getStringList("AutoBroadcast.Messages"));
         autoBroadcastUseCommand = config.getBoolean("AutoBroadcast.UseBroadcastCommand");
         autoBroadcastCommand = config.getString("AutoBroadcast.BroadcastCommand", "");
+    }
+
+    // Configs from before Settings.EventWorld existed only have the spawn location, whose world was the event world.
+    private static @NotNull String readEventWorld(@NotNull final FileConfiguration config) {
+        final String eventWorld = config.getString("Settings.EventWorld", "").trim();
+        if (!eventWorld.isEmpty()) return eventWorld;
+
+        return config.getString("Settings.SpawnLocation", "world/0/200/0").split("/")[0];
     }
 
     /**

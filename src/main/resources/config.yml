@@ -14,9 +14,21 @@
 #
 # ---------------------------------------------------------------------------
 
+# EventCore only works in the event world (Settings.EventWorld), so the event can run on the same server as other worlds.
+# Players join the event with '/event' and leave it with '/event leave' (or by going to another world in any other way).
+# Their own items, ender chest, game mode, health, hunger, experience and effects are put away when they enter the event
+# world and given back when they leave it: nothing can be brought into the event or taken out of it.
+#
+# In all commands below, %world% is replaced with the event world (like 'minecraft:event'). Use '/execute in %world% run ...'
+# to limit a command to the event world: a plain '/kill @e' would kill the entities of every world on the server!
+
 Settings:
   Metrics: true # Enable or disable the metrics system - https://bstats.org/
-  SpawnLocation: 'world/0/200/0' # Change the setting only with '/event setSpawn'
+  EventWorld: 'event' # The world the event takes place in
+  SpawnLocation: 'event/0/200/0' # Change the setting only with '/event setSpawn' (in the event world)
+  EventWhitelist: # Staff (event.command or event.whitelist.bypass) can always join
+    Enabled: false # Change the setting only with '/event whitelist <on / off>'
+    Players: [] # Change the setting only with '/event whitelist <add / remove> <player>'
   MaxBuildHeight: 300 # Maximum build height
   DisableFallDamage: true # Disable fall damage
   DisableItemExplosions: true # Disable item explosions for End Crystal
@@ -25,12 +37,12 @@ Settings:
     NotifyOnJoin: true
     LogInConsole: false
   PlayerJoin:
-    Commands: [] # Commands executed by the console when a player joins, leave empty to disable. %player% is replaced with the player's name
+    Commands: [] # Commands executed by the console when a player joins the event, leave empty to disable. %player% is replaced with the player's name
   PlayerQuit:
-    Commands: [] # Commands executed by the console when a player leaves, leave empty to disable. %player% is replaced with the player's name
+    Commands: [] # Commands executed by the console when a player leaves the event, leave empty to disable. %player% is replaced with the player's name
   HostRank:
     Enabled: false
-    Permission: "event.host" # Permission which is required to receive the host rank upon Join
+    Permission: "event.host" # Permission which is required to receive the host rank upon joining the event
     JoinCommand: "lp user %player% parent add host"
     QuitCommand: "lp user %player% parent remove host"
   WorldBorder:
@@ -56,16 +68,16 @@ Settings:
   Drop:
     BorderExtra: 3 # Blocks that are dropped in addition to the border size
     CustomCommands: # Commands which are additionally executed after the drop
-      - "/kill @e[type=!player]"
+      - "/execute in %world% run kill @e[type=!player,distance=0..]"
   IngameTimer:
     Enabled: true
     Format: "&8» &chh:mm:ss &8«" # Format of the timer - hh = hours, mm = minutes, ss = seconds
   Start:
     CustomCommands: # Commands which are executed on start
-      - "/kill @e[type=!player]"
+      - "/execute in %world% run kill @e[type=!player,distance=0..]"
   Stop:
     CustomCommands: # Commands which are executed after the stop
-      - "/whitelist on"
+      - "/event whitelist on"
 
 Messages:
   Prefix: "&8 | &#559effEvent &8» &7"

@@ -4,13 +4,10 @@ import me.david.EventCore;
 import me.david.util.*;
 import me.david.util.folia.FoliaScheduler;
 import net.kyori.adventure.text.Component;
-import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
-
-import java.util.Map;
 
 public class PlayerJoinListener implements Listener {
 
@@ -19,27 +16,9 @@ public class PlayerJoinListener implements Listener {
         final Player player = event.getPlayer();
         final Settings settings = EventCore.getInstance().getSettings();
 
-        HostUtil.giveHost(player);
-
-        for (String command : settings.getPlayerJoinCommands()) {
-            CommandUtil.dispatch(command.replace("%player%", player.getName()));
-        }
-
-        if (settings.isJoinMessageEnabled()) {
-            Component message = MessageUtil.getPrefix().append(MessageUtil.format("Messages.PlayerJoin.Message", Map.of("%player%", Component.text(player.getName()))));
-            event.joinMessage(message);
-        } else {
-            event.joinMessage(Component.empty());
-        }
-
-        // Late joiners only spectate, so they go straight to spectator without the kit (which would be cleared again).
-        PlayerUtil.resetPlayer(player, EventCore.getInstance().getGameManager().isRunning() ? GameMode.SPECTATOR : GameMode.SURVIVAL);
-        FoliaScheduler.getEntityScheduler().runDelayed(player, EventCore.getInstance(), o -> {
-            player.teleportAsync(EventCore.getInstance().getMapManager().getSpawnLocation());
-            if (EventCore.getInstance().getGameManager().isRunning()) {
-                player.setGameMode(GameMode.SPECTATOR);
-            }
-        }, null, 2);
+        // Joining the server isn't joining the event (that's /event): only players logging in inside the event world
+        // are readied for it, everyone else is left alone.
+        EventCore.getInstance().getEventWorldManager().handleJoin(player);
 
         if (settings.isNotifyUpdatesOnJoin() && player.hasPermission("event.notify")) {
             // Shared checker: re-queries GitHub at most once an hour instead of on every join.

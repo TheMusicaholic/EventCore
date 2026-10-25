@@ -1,5 +1,6 @@
 package me.david.command.impl;
 
+import me.david.EventCore;
 import me.david.command.BukkitCommand;
 import me.david.util.MessageUtil;
 import me.david.util.PlayerUtil;
@@ -24,7 +25,7 @@ public class ReviveCommand extends BukkitCommand {
 
         if (args.length == 1) {
             if (args[0].equalsIgnoreCase("*")) {
-                PlayerUtil.runForAll(PlayerUtil::cleanPlayer);
+                PlayerUtil.runForEventPlayers(PlayerUtil::cleanPlayer);
                 player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§aEveryone §7has been revived!")));
                 return;
             }
@@ -32,6 +33,12 @@ public class ReviveCommand extends BukkitCommand {
             final Player target = Bukkit.getPlayer(args[0]);
             if (target == null) {
                 player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§cThis player is not online!")));
+                return;
+            }
+
+            // Reviving resets the inventory, which outside the event is the player's own.
+            if (!EventCore.getInstance().getEventWorldManager().isInEventWorld(target)) {
+                player.sendMessage(MessageUtil.getPrefix().append(MessageUtil.translateColorCodes("§cThis player is not in the event!")));
                 return;
             }
 
@@ -51,7 +58,7 @@ public class ReviveCommand extends BukkitCommand {
         List<String> list = new ArrayList<>();
 
         if (args.length == 1) {
-            list.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
+            list.addAll(EventCore.getInstance().getEventWorldManager().getPlayers().stream().map(Player::getName).toList());
             list.add("*");
         }
 

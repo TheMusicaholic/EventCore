@@ -14,11 +14,16 @@ public class PlayerRespawnListener implements Listener {
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent event) {
         final Player player = event.getPlayer();
+        // Still the world they died in.
+        if (!EventCore.getInstance().getEventWorldManager().isInEventWorld(player)) return;
+
         event.setRespawnLocation(EventCore.getInstance().getMapManager().getSpawnLocation());
         // The player isn't fully respawned while this event runs, so changing them now gets lost or leaves them stuck.
         // Wait until the next tick, when they're back in the world.
         FoliaScheduler.getEntityScheduler().runDelayed(player, EventCore.getInstance(), o -> {
-            if (player.isOnline()) PlayerUtil.resetPlayer(player, GameMode.SPECTATOR);
+            if (player.isOnline() && EventCore.getInstance().getEventWorldManager().isInEventWorld(player)) {
+                PlayerUtil.resetPlayer(player, GameMode.SPECTATOR);
+            }
         }, null, 1);
     }
 

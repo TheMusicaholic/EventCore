@@ -8,3 +8,10 @@ website: https://github.com/DavidArchive/EventCore
 canvas-supported: true
 softdepend: [PlaceholderAPI]
 depend: [WorldEdit]
+permissions:
+  event.join:
+    description: Join the event with /event
+    default: true
+  event.whitelist.bypass:
+    description: Join the event while it's whitelisted
+    default: op

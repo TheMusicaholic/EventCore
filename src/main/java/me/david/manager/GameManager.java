@@ -88,7 +88,7 @@ public class GameManager implements me.david.api.manager.GameManager {
                 sound = Sound.ENTITY_PLAYER_LEVELUP;
             }
 
-            for (Player player : Bukkit.getOnlinePlayers()) {
+            for (Player player : EventCore.getInstance().getEventWorldManager().getPlayers()) {
                 player.sendMessage(message);
                 player.showTitle(title);
                 // Played at the player entity: no Location to allocate, and no reading another region's player position.
@@ -96,7 +96,8 @@ public class GameManager implements me.david.api.manager.GameManager {
             }
 
             if (current <= 0) {
-                for (World world : Bukkit.getWorlds()) {
+                final World world = EventCore.getInstance().getEventWorldManager().getWorld();
+                if (world != null) {
                     world.setDifficulty(Difficulty.HARD);
                 }
 
@@ -127,7 +128,7 @@ public class GameManager implements me.david.api.manager.GameManager {
                 if (running && PlayerUtil.getAlive() == 1) {
                     running = false;
                     FoliaScheduler.getGlobalRegionScheduler().execute(EventCore.getInstance(), () -> stop(
-                            Bukkit.getOnlinePlayers().stream()
+                            EventCore.getInstance().getEventWorldManager().getPlayers().stream()
                                     .filter(player -> player.getGameMode() == GameMode.SURVIVAL)
                                     .findFirst()
                                     .map(Player::getName)
@@ -174,7 +175,7 @@ public class GameManager implements me.david.api.manager.GameManager {
         final Component message = MessageUtil.getPrefix().append(MessageUtil.format("Messages.Stop.Message", replacements));
         final Title title = Title.title(MessageUtil.format("Messages.Stop.Title", replacements), MessageUtil.format("Messages.Stop.SubTitle", replacements));
 
-        for (Player player : Bukkit.getOnlinePlayers()) {
+        for (Player player : plugin.getEventWorldManager().getPlayers()) {
             player.sendMessage(message);
             player.showTitle(title);
             player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 5, 5);
@@ -183,7 +184,8 @@ public class GameManager implements me.david.api.manager.GameManager {
 
         // On Folia worlds may only be changed from the global region, and /event stop runs on the sender's region.
         FoliaScheduler.getGlobalRegionScheduler().runNowOrSchedule(plugin, () -> {
-            for (World world : Bukkit.getWorlds()) {
+            final World world = plugin.getEventWorldManager().getWorld();
+            if (world != null) {
                 world.setDifficulty(Difficulty.PEACEFUL);
                 world.getWorldBorder().setSize(BorderUtil.borderDefault);
             }
@@ -215,7 +217,7 @@ public class GameManager implements me.david.api.manager.GameManager {
 
             // Same text for everyone, so translate it once per tick instead of once per player.
             final Component actionbar = MessageUtil.translateColorCodes(raw);
-            for (Player player : Bukkit.getOnlinePlayers()) {
+            for (Player player : EventCore.getInstance().getEventWorldManager().getPlayers()) {
                 player.sendActionBar(actionbar);
             }
         }, 0, 20);
